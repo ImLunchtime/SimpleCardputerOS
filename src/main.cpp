@@ -1,14 +1,9 @@
 #include "M5Cardputer.h"
-#include "Graphics.h"
+#include "NewTestApp.h"
 #include "EventSystem.h"
-#include "App.h"
-#include "TestApp.h"
 
-// 系统组件
-Graphics* graphics;
 EventSystem eventSystem;
-AppSystem appSystem;
-TestApp* testApp;
+NewTestApp appSystem(&eventSystem);
 
 void setup() {
   // 初始化M5Cardputer
@@ -19,12 +14,8 @@ void setup() {
   M5Cardputer.Display.setRotation(1);
   M5Cardputer.Display.setTextSize(1);
   
-  // 初始化图形系统
-  graphics = new Graphics();
-  
-  // 创建并运行测试App
-  testApp = new TestApp(graphics, &eventSystem);
-  appSystem.runApp(testApp);
+  // 初始化应用
+  appSystem.setup();
 }
 
 void loop() {
@@ -34,11 +25,11 @@ void loop() {
   // 检查键盘事件
   KeyEvent event;
   if (eventSystem.hasKeyEvent(event)) {
-    appSystem.handleKeyEvent(event);
+    appSystem.onKeyEvent(event);
   }
   
   // 更新当前App
-  appSystem.update();
+  appSystem.loop();
   
   delay(50);  // 减少CPU使用
 }
