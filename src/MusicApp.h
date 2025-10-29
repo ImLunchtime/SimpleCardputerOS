@@ -10,7 +10,6 @@ private:
     
     // 控件ID定义
     enum ControlIds {
-        TITLE_LABEL_ID = 1,
         STATUS_LABEL_ID = 2,
         INFO_LABEL_ID = 3,
         BACK_BUTTON_ID = 4,
@@ -18,7 +17,6 @@ private:
     };
     
     // 控件引用
-    UILabel* titleLabel;
     UILabel* statusLabel;
     UILabel* infoLabel;
     UIButton* backButton;
@@ -43,20 +41,17 @@ public:
         : eventSystem(events) {}
 
     void setup() override {
-        // 创建主窗口
-        mainWindow = uiManager->createWindow(WINDOW_ID, 2, 2, 236, 131, "Music Player", "MainWindow");
-        
-        // 创建标题标签
-        titleLabel = uiManager->createLabel(TITLE_LABEL_ID, 8, 18, "Music Player", "Title");
+        // 创建主窗口 - 更小的窗口位于指定位置
+        mainWindow = uiManager->createWindow(WINDOW_ID, 20, 20, 150, 100, "Music", "MainWindow");
         
         // 创建状态标签
-        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 8, 30, "Ready to play music", "Status");
+        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 25, 35, "Ready to play music", "Status");
         
         // 创建信息标签
-        infoLabel = uiManager->createLabel(INFO_LABEL_ID, 8, 50, "This is a placeholder music app.", "Info");
+        infoLabel = uiManager->createLabel(INFO_LABEL_ID, 25, 50, "Music app placeholder", "Info");
         
         // 创建返回按钮
-        backButton = new BackButton(BACK_BUTTON_ID, 8, 90, 80, 20, "Back", "BackButton", this);
+        backButton = new BackButton(BACK_BUTTON_ID, 25, 85, 80, 20, "Back", "BackButton", this);
         uiManager->addWidget(backButton);
     }
 

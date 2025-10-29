@@ -10,7 +10,6 @@ private:
     
     // 控件ID定义
     enum ControlIds {
-        TITLE_LABEL_ID = 1,
         STATUS_LABEL_ID = 2,
         MENU_LIST_ID = 3,
         BACK_BUTTON_ID = 4,
@@ -18,7 +17,6 @@ private:
     };
     
     // 控件引用
-    UILabel* titleLabel;
     UILabel* statusLabel;
     UIMenuList* settingsMenu;
     UIButton* backButton;
@@ -57,17 +55,14 @@ public:
         : eventSystem(events) {}
 
     void setup() override {
-        // 创建主窗口
-        mainWindow = uiManager->createWindow(WINDOW_ID, 2, 2, 236, 131, "Settings", "MainWindow");
-        
-        // 创建标题标签
-        titleLabel = uiManager->createLabel(TITLE_LABEL_ID, 8, 18, "Settings", "Title");
+        // 创建主窗口 - 更小的窗口位于指定位置
+        mainWindow = uiManager->createWindow(WINDOW_ID, 20, 20, 150, 100, "Settings", "MainWindow");
         
         // 创建状态标签
-        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 8, 30, "Select a setting to configure", "Status");
+        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 25, 35, "Select a setting", "Status");
         
         // 创建设置菜单
-        settingsMenu = new SettingsMenuList(MENU_LIST_ID, 8, 45, 150, 60, "SettingsMenu", 15, this);
+        settingsMenu = new SettingsMenuList(MENU_LIST_ID, 25, 45, 120, 40, "SettingsMenu", 10, this);
         uiManager->addWidget(settingsMenu);
         
         // 添加设置项
@@ -77,7 +72,7 @@ public:
         settingsMenu->addItem("About", 104);
         
         // 创建返回按钮
-        backButton = new BackButton(BACK_BUTTON_ID, 170, 90, 60, 20, "Back", "BackButton", this);
+        backButton = new BackButton(BACK_BUTTON_ID, 25, 90, 60, 15, "Back", "BackButton", this);
         uiManager->addWidget(backButton);
         
         // 设置菜单颜色
@@ -134,7 +129,7 @@ private:
             }
             statusLabel->setText(status);
         } else {
-            statusLabel->setText("Select a setting to configure");
+            statusLabel->setText("Select a setting");
         }
     }
 

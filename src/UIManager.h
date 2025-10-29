@@ -14,11 +14,21 @@ private:
     int focusableWidgets[20];  // 可聚焦控件的索引
     int focusableCount;
     
+    // 多层窗口管理
+    UIWidget* backgroundWidgets[20];  // 背景层控件（启动器）
+    int backgroundWidgetCount;
+    UIWidget* foregroundWidgets[20];  // 前景层控件（当前应用）
+    int foregroundWidgetCount;
+    bool hasBackgroundLayer;  // 是否有背景层
+    
 public:
-    UIManager() : display(&M5Cardputer.Display), widgetCount(0), currentFocus(-1), focusableCount(0) {
+    UIManager() : display(&M5Cardputer.Display), widgetCount(0), currentFocus(-1), focusableCount(0), 
+                  backgroundWidgetCount(0), foregroundWidgetCount(0), hasBackgroundLayer(false) {
         for (int i = 0; i < 20; i++) {
             widgets[i] = nullptr;
             focusableWidgets[i] = -1;
+            backgroundWidgets[i] = nullptr;
+            foregroundWidgets[i] = nullptr;
         }
     }
     
@@ -30,6 +40,12 @@ public:
     void addWidget(UIWidget* widget) {
         if (widgetCount < 20 && widget != nullptr) {
             widgets[widgetCount] = widget;
+            
+            // 如果有背景层，新控件添加到前景层
+            if (hasBackgroundLayer && foregroundWidgetCount < 20) {
+                foregroundWidgets[foregroundWidgetCount] = widget;
+                foregroundWidgetCount++;
+            }
             
             // 如果是可聚焦控件，添加到焦点列表
             if (widget->isFocusable()) {
@@ -91,6 +107,34 @@ public:
         for (int i = 0; i < 20; i++) {
             focusableWidgets[i] = -1;
         }
+    }
+    
+    // 清除前景层（应用窗口）
+    void clearForeground() {
+        // 只清除前景层控件
+        for (int i = 0; i < foregroundWidgetCount; i++) {
+            if (foregroundWidgets[i]) {
+                // 从主控件列表中移除
+                removeFromMainList(foregroundWidgets[i]);
+                delete foregroundWidgets[i];
+                foregroundWidgets[i] = nullptr;
+            }
+        }
+        foregroundWidgetCount = 0;
+        
+        // 重建焦点列表（只包含背景层的可聚焦控件）
+        rebuildFocusListForBackground();
+    }
+    
+    // 保存当前控件到背景层
+    void saveToBackground() {
+        for (int i = 0; i < widgetCount; i++) {
+            if (widgets[i] && backgroundWidgetCount < 20) {
+                backgroundWidgets[backgroundWidgetCount] = widgets[i];
+                backgroundWidgetCount++;
+            }
+        }
+        hasBackgroundLayer = true;
     }
     
     // 焦点管理
@@ -182,9 +226,28 @@ public:
     }
     
     void drawAll() {
-        for (int i = 0; i < widgetCount; i++) {
-            if (widgets[i] && widgets[i]->isVisible()) {
-                widgets[i]->draw(display);
+        // 先绘制背景层
+        if (hasBackgroundLayer) {
+            for (int i = 0; i < backgroundWidgetCount; i++) {
+                if (backgroundWidgets[i] && backgroundWidgets[i]->isVisible()) {
+                    backgroundWidgets[i]->draw(display);
+                }
+            }
+        }
+        
+        // 再绘制前景层
+        for (int i = 0; i < foregroundWidgetCount; i++) {
+            if (foregroundWidgets[i] && foregroundWidgets[i]->isVisible()) {
+                foregroundWidgets[i]->draw(display);
+            }
+        }
+        
+        // 如果没有分层，使用原来的方式
+        if (!hasBackgroundLayer && foregroundWidgetCount == 0) {
+            for (int i = 0; i < widgetCount; i++) {
+                if (widgets[i] && widgets[i]->isVisible()) {
+                    widgets[i]->draw(display);
+                }
             }
         }
     }
@@ -197,10 +260,29 @@ public:
     
     // 应用切换管理
     void switchToApp() {
-        // 清理所有现有控件
-        clear();
+        // 如果是第一次切换（启动器 -> 应用），保存启动器到背景层
+        if (!hasBackgroundLayer && widgetCount > 0) {
+            saveToBackground();
+        }
+        
+        // 清除前景层（如果有的话）
+        if (foregroundWidgetCount > 0) {
+            clearForeground();
+        }
+        
         // 清屏准备绘制新应用界面
         clearScreen();
+    }
+    
+    void switchToLauncher() {
+        // 清除前景层
+        if (foregroundWidgetCount > 0) {
+            clearForeground();
+        }
+        
+        // 清屏并重绘背景层
+        clearScreen();
+        drawAll();
     }
     
     void finishAppSetup() {
@@ -276,6 +358,52 @@ private:
         for (int i = 0; i < focusableCount; i++) {
             if (focusableWidgets[i] > widgetIndex) {
                 focusableWidgets[i]--;
+            }
+        }
+    }
+    
+    // 从主控件列表中移除指定控件
+    void removeFromMainList(UIWidget* widget) {
+        for (int i = 0; i < widgetCount; i++) {
+            if (widgets[i] == widget) {
+                // 如果是可聚焦控件，从焦点列表中移除
+                if (widget->isFocusable()) {
+                    removeFocusableWidget(i);
+                }
+                
+                // 移动后面的控件向前
+                for (int j = i; j < widgetCount - 1; j++) {
+                    widgets[j] = widgets[j + 1];
+                }
+                widgets[widgetCount - 1] = nullptr;
+                widgetCount--;
+                break;
+            }
+        }
+    }
+    
+    // 重建背景层的焦点列表
+    void rebuildFocusListForBackground() {
+        focusableCount = 0;
+        currentFocus = -1;
+        
+        // 重新扫描背景层的可聚焦控件
+        for (int i = 0; i < backgroundWidgetCount; i++) {
+            if (backgroundWidgets[i] && backgroundWidgets[i]->isFocusable()) {
+                // 找到对应的主列表索引
+                for (int j = 0; j < widgetCount; j++) {
+                    if (widgets[j] == backgroundWidgets[i]) {
+                        focusableWidgets[focusableCount] = j;
+                        focusableCount++;
+                        
+                        // 设置第一个为当前焦点
+                        if (currentFocus == -1) {
+                            currentFocus = 0;
+                            backgroundWidgets[i]->setFocused(true);
+                        }
+                        break;
+                    }
+                }
             }
         }
     }

@@ -17,7 +17,6 @@ private:
     };
     
     // 控件引用
-    UILabel* titleLabel;
     UILabel* statusLabel;
     UIMenuGrid* gridMenu;
     UIWindow* mainWindow;
@@ -44,14 +43,11 @@ public:
         // 创建主窗口 - 更小的窗口位于左上角
         mainWindow = uiManager->createWindow(WINDOW_ID, 5, 5, 150, 100, "Launcher", "MainWindow");
         
-        // 创建标题标签
-        titleLabel = uiManager->createLabel(TITLE_LABEL_ID, 10, 20, "Launcher", "Title");
-        
         // 创建状态标签
-        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 10, 32, "Select app", "Status");
+        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 10, 25, "Select app", "Status");
         
         // 创建网格菜单 - 2x2网格布局适配更小窗口
-        gridMenu = new LauncherMenuGrid(GRID_MENU_ID, 10, 45, 135, 55, 2, 2, "AppGrid", this);
+        gridMenu = new LauncherMenuGrid(GRID_MENU_ID, 10, 40, 140, 60, 2, 2, "AppGrid", this);
         uiManager->addWidget(gridMenu);
         
         // 从应用管理器获取应用列表并添加到菜单

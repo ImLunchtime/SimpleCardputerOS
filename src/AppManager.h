@@ -111,11 +111,10 @@ public:
     // 返回启动器
     void returnToLauncher() {
         if (launcherApp) {
-            // 使用全局UI管理器切换到启动器
-            globalUIManager->switchToApp();
+            // 使用全局UI管理器切换到启动器（保持背景层）
+            globalUIManager->switchToLauncher();
             currentApp = launcherApp;
-            currentApp->setup();
-            globalUIManager->finishAppSetup();
+            // 不需要重新setup，因为启动器窗口已经在背景层
         }
     }
     
