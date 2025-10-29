@@ -6,6 +6,10 @@ struct KeyEvent {
     bool enter;
     bool del;
     bool tab;
+    bool up;      // ";" 键
+    bool down;    // "." 键
+    bool left;    // "," 键
+    bool right;   // "/" 键
 };
 
 class EventSystem {
@@ -21,10 +25,24 @@ public:
             event.enter = status.enter;
             event.del = status.del;
             event.tab = status.tab;
+            event.up = false;
+            event.down = false;
+            event.left = false;
+            event.right = false;
             
-            // 构建文本字符串
+            // 构建文本字符串并检测方向键
             for (char c : status.word) {
-                event.text += c;
+                if (c == ';') {
+                    event.up = true;
+                } else if (c == '.') {
+                    event.down = true;
+                } else if (c == ',') {
+                    event.left = true;
+                } else if (c == '/') {
+                    event.right = true;
+                } else {
+                    event.text += c;  // 只有非方向键字符才加入text
+                }
             }
             
             return true;

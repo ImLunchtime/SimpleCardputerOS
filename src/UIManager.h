@@ -152,14 +152,23 @@ public:
     
     // 事件处理
     bool handleKeyEvent(const KeyEvent& event) {
-        // 处理Tab键切换焦点
+        UIWidget* focusedWidget = getCurrentFocusedWidget();
+        
+        // 处理Tab键切换焦点（总是允许Tab键切换焦点）
         if (event.tab) {
             nextFocus();
             return true;
         }
         
+        // 如果当前聚焦的控件有二级焦点，优先处理二级焦点的键盘事件
+        if (focusedWidget && focusedWidget->hasSecondaryFocus()) {
+            // 对于菜单控件，方向键由控件自己处理
+            if (event.up || event.down || event.left || event.right || event.enter) {
+                return focusedWidget->handleKeyEvent(event);
+            }
+        }
+        
         // 将事件传递给当前聚焦的控件
-        UIWidget* focusedWidget = getCurrentFocusedWidget();
         if (focusedWidget) {
             return focusedWidget->handleKeyEvent(event);
         }
@@ -210,6 +219,18 @@ public:
         UIWindow* window = new UIWindow(id, x, y, width, height, title, name);
         addWidget(window);
         return window;
+    }
+    
+    UIMenuList* createMenuList(int id, int x, int y, int width, int height, const String& name = "", int itemHeight = 16) {
+        UIMenuList* menu = new UIMenuList(id, x, y, width, height, name, itemHeight);
+        addWidget(menu);
+        return menu;
+    }
+    
+    UIMenuGrid* createMenuGrid(int id, int x, int y, int width, int height, int columns, int rows, const String& name = "") {
+        UIMenuGrid* menu = new UIMenuGrid(id, x, y, width, height, columns, rows, name);
+        addWidget(menu);
+        return menu;
     }
     
 private:

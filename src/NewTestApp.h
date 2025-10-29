@@ -12,45 +12,84 @@ private:
     enum ControlIds {
         TITLE_LABEL_ID = 1,
         STATUS_LABEL_ID = 2,
-        BUTTON1_ID = 3,
-        BUTTON2_ID = 4,
-        BUTTON3_ID = 5,
-        INPUT_ID = 6,
-        WINDOW_ID = 7
+        LIST_MENU_ID = 3,
+        GRID_MENU_ID = 4,
+        WINDOW_ID = 5
     };
     
-    // 控件引用（便于访问）
+    // 控件引用
     UILabel* titleLabel;
     UILabel* statusLabel;
-    UIButton* button1;
-    UIButton* button2;
-    UIButton* button3;
-    UIInput* inputField;
+    UIMenuList* listMenu;
+    UIMenuGrid* gridMenu;
     UIWindow* mainWindow;
+    
+    // 自定义菜单类来处理菜单项选择
+    class CustomMenuList : public UIMenuList {
+    public:
+        CustomMenuList(int id, int x, int y, int width, int height, const String& name, int itemHeight, NewTestApp* app)
+            : UIMenuList(id, x, y, width, height, name, itemHeight), parentApp(app) {}
+        
+        void onItemSelected(MenuItem* item) override {
+            parentApp->handleListMenuSelection(item);
+        }
+        
+    private:
+        NewTestApp* parentApp;
+    };
+    
+    class CustomMenuGrid : public UIMenuGrid {
+    public:
+        CustomMenuGrid(int id, int x, int y, int width, int height, int columns, int rows, const String& name, NewTestApp* app)
+            : UIMenuGrid(id, x, y, width, height, columns, rows, name), parentApp(app) {}
+        
+        void onItemSelected(MenuItem* item) override {
+            parentApp->handleGridMenuSelection(item);
+        }
+        
+    private:
+        NewTestApp* parentApp;
+    };
 
 public:
     NewTestApp(EventSystem* events) : eventSystem(events) {}
 
     void setup() override {
-        // 创建主窗口
-        mainWindow = uiManager.createWindow(WINDOW_ID, 10, 10, 220, 110, "CardputerOS Test", "MainWindow");
+        // 创建主窗口 - 适配240x135屏幕
+        mainWindow = uiManager.createWindow(WINDOW_ID, 2, 2, 236, 131, "Menu Test", "MainWindow");
         
-        // 创建标题标签
-        titleLabel = uiManager.createLabel(TITLE_LABEL_ID, 20, 30, "CardputerOS UI Library Demo", "Title");
+        // 创建标题标签 - 缩小字体和位置
+        titleLabel = uiManager.createLabel(TITLE_LABEL_ID, 8, 18, "Menu Test", "Title");
         
-        // 创建状态标签
-        statusLabel = uiManager.createLabel(STATUS_LABEL_ID, 20, 45, "Focus: None", "Status");
+        // 创建状态标签 - 简化文本
+        statusLabel = uiManager.createLabel(STATUS_LABEL_ID, 8, 30, "Tab: switch, Arrows: navigate", "Status");
         
-        // 创建按钮
-        button1 = uiManager.createButton(BUTTON1_ID, 20, 60, 60, 20, "Button1", "Button1");
-        button2 = uiManager.createButton(BUTTON2_ID, 90, 60, 60, 20, "Button2", "Button2");
-        button3 = uiManager.createButton(BUTTON3_ID, 160, 60, 60, 20, "Button3", "Button3");
+        // 创建列表菜单 - 调整尺寸适配小屏幕
+        listMenu = new CustomMenuList(LIST_MENU_ID, 8, 45, 100, 80, "ListMenu", 16, this);
+        uiManager.addWidget(listMenu);
         
-        // 创建输入框
-        inputField = uiManager.createInput(INPUT_ID, 20, 90, 200, 20, "Enter text here...", "Input");
+        // 添加列表菜单项 - 减少项目数量
+        listMenu->addItem("File", 101);
+        listMenu->addItem("Edit", 102);
+        listMenu->addItem("View", 103);
+        listMenu->addItem("Tools", 104);
+        listMenu->addItem("Exit", 105);
         
-        // 设置按钮点击处理
-        setupButtonHandlers();
+        // 创建网格菜单 - 调整尺寸和网格布局
+        gridMenu = new CustomMenuGrid(GRID_MENU_ID, 120, 45, 110, 80, 2, 3, "GridMenu", this);
+        uiManager.addWidget(gridMenu);
+        
+        // 添加网格菜单项 - 适配2x3网格
+        gridMenu->addItem("App1", 201);
+        gridMenu->addItem("App2", 202);
+        gridMenu->addItem("Game", 203);
+        gridMenu->addItem("Music", 204);
+        gridMenu->addItem("Photo", 205);
+        gridMenu->addItem("Set", 206);
+        
+        // 设置菜单颜色
+        listMenu->setColors(TFT_CYAN, TFT_YELLOW, TFT_WHITE, TFT_DARKGREY);
+        gridMenu->setColors(TFT_MAGENTA, TFT_GREEN, TFT_WHITE, TFT_DARKGREY);
         
         // 初始绘制
         drawInterface();
@@ -69,91 +108,71 @@ public:
         }
     }
 
+    void handleListMenuSelection(MenuItem* item) {
+        String message = "List Menu: Selected '" + item->text + "' (ID: " + String(item->id) + ")";
+        statusLabel->setText(message);
+        
+        // 根据选择的菜单项执行不同操作
+        switch (item->id) {
+            case 101: // File
+                // 处理文件菜单
+                break;
+            case 102: // Edit
+                // 处理编辑菜单
+                break;
+            case 103: // View
+                // 处理视图菜单
+                break;
+            case 104: // Tools
+                // 处理工具菜单
+                break;
+            case 105: // Exit
+                // 处理退出菜单
+                break;
+        }
+    }
+    
+    void handleGridMenuSelection(MenuItem* item) {
+        String message = "Grid Menu: Selected '" + item->text + "' (ID: " + String(item->id) + ")";
+        statusLabel->setText(message);
+        
+        // 根据选择的菜单项执行不同操作
+        switch (item->id) {
+            case 201: // App1
+                // 启动应用1
+                break;
+            case 202: // App2
+                // 启动应用2
+                break;
+            case 203: // Game
+                // 启动游戏
+                break;
+            case 204: // Music
+                // 启动音乐播放器
+                break;
+            case 205: // Photo
+                // 启动照片查看器
+                break;
+            case 206: // Set
+                // 启动设置
+                break;
+        }
+    }
+
 private:
-    void setupButtonHandlers() {
-        // 创建自定义按钮类来处理点击事件
-        class CustomButton1 : public UIButton {
-        public:
-            CustomButton1(int id, int x, int y, int width, int height, const String& text, const String& name, NewTestApp* app)
-                : UIButton(id, x, y, width, height, text, name), parentApp(app) {}
-            
-            void onButtonClick() override {
-                parentApp->handleButton1Click();
-            }
-            
-        private:
-            NewTestApp* parentApp;
-        };
-        
-        class CustomButton2 : public UIButton {
-        public:
-            CustomButton2(int id, int x, int y, int width, int height, const String& text, const String& name, NewTestApp* app)
-                : UIButton(id, x, y, width, height, text, name), parentApp(app) {}
-            
-            void onButtonClick() override {
-                parentApp->handleButton2Click();
-            }
-            
-        private:
-            NewTestApp* parentApp;
-        };
-        
-        class CustomButton3 : public UIButton {
-        public:
-            CustomButton3(int id, int x, int y, int width, int height, const String& text, const String& name, NewTestApp* app)
-                : UIButton(id, x, y, width, height, text, name), parentApp(app) {}
-            
-            void onButtonClick() override {
-                parentApp->handleButton3Click();
-            }
-            
-        private:
-            NewTestApp* parentApp;
-        };
-        
-        // 替换默认按钮为自定义按钮
-        uiManager.removeWidget(BUTTON1_ID);
-        uiManager.removeWidget(BUTTON2_ID);
-        uiManager.removeWidget(BUTTON3_ID);
-        
-        button1 = new CustomButton1(BUTTON1_ID, 20, 60, 60, 20, "Button1", "Button1", this);
-        button2 = new CustomButton2(BUTTON2_ID, 90, 60, 60, 20, "Button2", "Button2", this);
-        button3 = new CustomButton3(BUTTON3_ID, 160, 60, 60, 20, "Button3", "Button3", this);
-        
-        uiManager.addWidget(button1);
-        uiManager.addWidget(button2);
-        uiManager.addWidget(button3);
-    }
-    
-    void handleButton1Click() {
-        titleLabel->setText("Button 1 Clicked!");
-        drawInterface();
-    }
-    
-    void handleButton2Click() {
-        titleLabel->setText("Button 2 Clicked!");
-        drawInterface();
-    }
-    
-    void handleButton3Click() {
-        titleLabel->setText("Button 3 Clicked!");
-        drawInterface();
-    }
-    
     void updateStatus() {
         UIWidget* focusedWidget = uiManager.getCurrentFocusedWidget();
         if (focusedWidget) {
             String status = "Focus: " + focusedWidget->getName();
-            if (focusedWidget->getType() == WIDGET_INPUT) {
-                UIInput* input = static_cast<UIInput*>(focusedWidget);
-                status += " [" + input->getText() + "]";
+            if (focusedWidget->hasSecondaryFocus()) {
+                status = "Navigate: " + focusedWidget->getName();
             }
             statusLabel->setText(status);
         } else {
-            statusLabel->setText("Focus: None");
+            statusLabel->setText("No focus");
         }
     }
-    
+
     void drawInterface() {
         uiManager.clearScreen();
         uiManager.drawAll();
