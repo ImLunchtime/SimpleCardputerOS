@@ -5,14 +5,14 @@ struct KeyEvent {
     String text;
     bool enter;
     bool del;
-    bool tab;  // 添加Tab键检测
+    bool tab;
 };
 
 class EventSystem {
 public:
     bool hasKeyEvent(KeyEvent& event) {
         if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
-            // 关键：必须先更新键盘状态
+            // 关键：先更新键盘状态
             M5Cardputer.Keyboard.updateKeysState();
             Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
             
@@ -20,7 +20,7 @@ public:
             event.text = "";
             event.enter = status.enter;
             event.del = status.del;
-            event.tab = status.tab;  // 直接使用KeysState中的tab字段
+            event.tab = status.tab;
             
             // 构建文本字符串
             for (char c : status.word) {
