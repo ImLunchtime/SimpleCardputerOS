@@ -45,17 +45,49 @@ public:
             if (hasBackgroundLayer && foregroundWidgetCount < 20) {
                 foregroundWidgets[foregroundWidgetCount] = widget;
                 foregroundWidgetCount++;
-            }
-            
-            // 如果是可聚焦控件，添加到焦点列表
-            if (widget->isFocusable()) {
-                focusableWidgets[focusableCount] = widgetCount;
-                focusableCount++;
                 
-                // 如果是第一个可聚焦控件，设置为当前焦点
-                if (currentFocus == -1) {
-                    currentFocus = 0;
-                    widget->setFocused(true);
+                // 对于前景层控件，只有在没有其他前景层可聚焦控件时才设置焦点
+                if (widget->isFocusable()) {
+                    // 检查是否已有前景层可聚焦控件
+                    bool hasForegroundFocusable = false;
+                    for (int i = 0; i < foregroundWidgetCount - 1; i++) {
+                        if (foregroundWidgets[i] && foregroundWidgets[i]->isFocusable()) {
+                            hasForegroundFocusable = true;
+                            break;
+                        }
+                    }
+                    
+                    // 如果这是第一个前景层可聚焦控件，清除背景层焦点并设置为当前焦点
+                    if (!hasForegroundFocusable) {
+                        // 清除所有背景层控件的焦点
+                        for (int i = 0; i < backgroundWidgetCount; i++) {
+                            if (backgroundWidgets[i]) {
+                                backgroundWidgets[i]->setFocused(false);
+                            }
+                        }
+                        
+                        // 重置焦点列表并添加这个控件
+                        focusableCount = 1;
+                        focusableWidgets[0] = widgetCount;
+                        currentFocus = 0;
+                        widget->setFocused(true);
+                    } else {
+                        // 添加到焦点列表但不设置焦点
+                        focusableWidgets[focusableCount] = widgetCount;
+                        focusableCount++;
+                    }
+                }
+            } else {
+                // 没有背景层时的原始逻辑
+                if (widget->isFocusable()) {
+                    focusableWidgets[focusableCount] = widgetCount;
+                    focusableCount++;
+                    
+                    // 如果是第一个可聚焦控件，设置为当前焦点
+                    if (currentFocus == -1) {
+                        currentFocus = 0;
+                        widget->setFocused(true);
+                    }
                 }
             }
             
@@ -287,6 +319,10 @@ public:
     
     void finishAppSetup() {
         // 应用设置完成后刷新界面
+        if (hasBackgroundLayer && foregroundWidgetCount > 0) {
+            // 重建前景层的焦点列表，确保只有前景层控件可以被聚焦
+            rebuildFocusListForForeground();
+        }
         drawAll();
     }
     
@@ -400,6 +436,39 @@ private:
                         if (currentFocus == -1) {
                             currentFocus = 0;
                             backgroundWidgets[i]->setFocused(true);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    
+    // 重建前景层的焦点列表
+    void rebuildFocusListForForeground() {
+        focusableCount = 0;
+        currentFocus = -1;
+        
+        // 清除所有控件的焦点状态
+        for (int i = 0; i < widgetCount; i++) {
+            if (widgets[i]) {
+                widgets[i]->setFocused(false);
+            }
+        }
+        
+        // 重新扫描前景层的可聚焦控件
+        for (int i = 0; i < foregroundWidgetCount; i++) {
+            if (foregroundWidgets[i] && foregroundWidgets[i]->isFocusable()) {
+                // 找到对应的主列表索引
+                for (int j = 0; j < widgetCount; j++) {
+                    if (widgets[j] == foregroundWidgets[i]) {
+                        focusableWidgets[focusableCount] = j;
+                        focusableCount++;
+                        
+                        // 设置第一个为当前焦点
+                        if (currentFocus == -1) {
+                            currentFocus = 0;
+                            foregroundWidgets[i]->setFocused(true);
                         }
                         break;
                     }

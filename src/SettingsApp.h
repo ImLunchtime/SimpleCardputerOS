@@ -56,13 +56,13 @@ public:
 
     void setup() override {
         // 创建主窗口 - 更小的窗口位于指定位置
-        mainWindow = uiManager->createWindow(WINDOW_ID, 20, 20, 150, 100, "Settings", "MainWindow");
+        mainWindow = uiManager->createWindow(WINDOW_ID, 30, 20, 150, 100, "Settings", "MainWindow");
         
         // 创建状态标签
-        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 25, 35, "Select a setting", "Status");
+        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 35, 35, "Select a setting", "Status");
         
         // 创建设置菜单
-        settingsMenu = new SettingsMenuList(MENU_LIST_ID, 25, 45, 120, 40, "SettingsMenu", 10, this);
+        settingsMenu = new SettingsMenuList(MENU_LIST_ID, 35, 45, 120, 40, "SettingsMenu", 10, this);
         uiManager->addWidget(settingsMenu);
         
         // 添加设置项
@@ -72,7 +72,7 @@ public:
         settingsMenu->addItem("About", 104);
         
         // 创建返回按钮
-        backButton = new BackButton(BACK_BUTTON_ID, 25, 90, 60, 15, "Back", "BackButton", this);
+        backButton = new BackButton(BACK_BUTTON_ID, 35, 90, 60, 15, "Back", "BackButton", this);
         uiManager->addWidget(backButton);
         
         // 设置菜单颜色

@@ -42,16 +42,16 @@ public:
 
     void setup() override {
         // 创建主窗口 - 更小的窗口位于指定位置
-        mainWindow = uiManager->createWindow(WINDOW_ID, 20, 20, 150, 100, "Music", "MainWindow");
+        mainWindow = uiManager->createWindow(WINDOW_ID, 30, 20, 150, 100, "Music", "MainWindow");
         
         // 创建状态标签
-        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 25, 35, "Ready to play music", "Status");
+        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 35, 35, "Ready to play music", "Status");
         
         // 创建信息标签
-        infoLabel = uiManager->createLabel(INFO_LABEL_ID, 25, 50, "Music app placeholder", "Info");
+        infoLabel = uiManager->createLabel(INFO_LABEL_ID, 35, 50, "Music app placeholder", "Info");
         
         // 创建返回按钮
-        backButton = new BackButton(BACK_BUTTON_ID, 25, 85, 80, 20, "Back", "BackButton", this);
+        backButton = new BackButton(BACK_BUTTON_ID, 35, 85, 80, 20, "Back", "BackButton", this);
         uiManager->addWidget(backButton);
     }
 
