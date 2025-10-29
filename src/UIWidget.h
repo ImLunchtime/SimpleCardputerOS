@@ -74,6 +74,8 @@ public:
         width = text.length() * 6; // 更新宽度
     }
     
+    String getText() const { return text; }  // 添加getText方法
+    
     void setTextColor(uint16_t color) { textColor = color; }
     
     void draw(LGFX_Device* display) override {

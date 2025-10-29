@@ -3,21 +3,27 @@
 #include "UIManager.h"
 #include "EventSystem.h"
 #include "AppManager.h"
+#include "BatteryManager.h"
 
 class LauncherApp : public App {
 private:
     EventSystem* eventSystem;
+    BatteryManager batteryManager;  // 电池信息管理器
     
     // 控件ID定义
     enum ControlIds {
         TITLE_LABEL_ID = 1,
         STATUS_LABEL_ID = 2,
         GRID_MENU_ID = 3,
-        WINDOW_ID = 4
+        WINDOW_ID = 4,
+        BATTERY_LABEL_ID = 5,  // 电池信息标签ID
+        BATTERY_VOLTAGE_LABEL_ID = 6  // 电池电压标签ID
     };
     
     // 控件引用
     UILabel* statusLabel;
+    UILabel* batteryLabel;  // 电池信息标签
+    UILabel* batteryVoltageLabel;  // 电池电压标签
     UIMenuGrid* gridMenu;
     UIWindow* mainWindow;
     
@@ -40,8 +46,20 @@ public:
         : eventSystem(events) {}
 
     void setup() override {
+        // 初始化电池管理器
+        batteryManager.forceUpdate();
+        
         // 创建主窗口 - 更小的窗口位于左上角
         mainWindow = uiManager->createWindow(WINDOW_ID, 5, 5, 150, 100, "Launcher", "MainWindow");
+        
+        // 创建电池信息标签 - 位于窗口右上角
+        batteryLabel = uiManager->createLabel(BATTERY_LABEL_ID, 100, 10, batteryManager.getBatteryLevelString(), "BatteryInfo");
+        batteryLabel->setTextColor(TFT_GREEN);
+        
+        // 创建电池电压标签 - 位于电池信息标签下方
+        String voltageText = String(batteryManager.getBatteryVoltage()) + "mV";
+        batteryVoltageLabel = uiManager->createLabel(BATTERY_VOLTAGE_LABEL_ID, 100, 20, voltageText, "BatteryVoltage");
+        batteryVoltageLabel->setTextColor(TFT_CYAN);
         
         // 创建状态标签
         statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 10, 25, "Select app", "Status");
@@ -58,7 +76,38 @@ public:
     }
 
     void loop() override {
-        // 主循环逻辑（如果需要）
+        // 更新电池信息
+        batteryManager.update();
+        
+        bool needsRedraw = false;
+        
+        // 更新电池电量标签显示
+        String newBatteryText = batteryManager.getBatteryLevelString();
+        if (batteryLabel->getText() != newBatteryText) {
+            batteryLabel->setText(newBatteryText);
+            // 根据电池电量设置颜色
+            int level = batteryManager.getBatteryLevel();
+            if (level > 50) {
+                batteryLabel->setTextColor(TFT_GREEN);
+            } else if (level > 20) {
+                batteryLabel->setTextColor(TFT_YELLOW);
+            } else {
+                batteryLabel->setTextColor(TFT_RED);
+            }
+            needsRedraw = true;
+        }
+        
+        // 更新电池电压标签显示
+        String newVoltageText = String(batteryManager.getBatteryVoltage()) + "mV";
+        if (batteryVoltageLabel->getText() != newVoltageText) {
+            batteryVoltageLabel->setText(newVoltageText);
+            needsRedraw = true;
+        }
+        
+        // 只有当信息发生变化时才重绘界面
+        if (needsRedraw) {
+            drawInterface();
+        }
     }
 
     void onKeyEvent(const KeyEvent& event) override {
