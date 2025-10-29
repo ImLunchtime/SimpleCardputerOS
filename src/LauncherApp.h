@@ -41,17 +41,17 @@ public:
         : eventSystem(events) {}
 
     void setup() override {
-        // 创建主窗口 - 适配240x135屏幕
-        mainWindow = uiManager->createWindow(WINDOW_ID, 2, 2, 236, 131, "App Launcher", "MainWindow");
+        // 创建主窗口 - 更小的窗口位于左上角
+        mainWindow = uiManager->createWindow(WINDOW_ID, 5, 5, 150, 100, "Launcher", "MainWindow");
         
         // 创建标题标签
-        titleLabel = uiManager->createLabel(TITLE_LABEL_ID, 8, 18, "App Launcher", "Title");
+        titleLabel = uiManager->createLabel(TITLE_LABEL_ID, 10, 20, "Launcher", "Title");
         
         // 创建状态标签
-        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 8, 30, "Select an app to launch", "Status");
+        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 10, 32, "Select app", "Status");
         
-        // 创建网格菜单 - 3x2网格布局适配小屏幕
-        gridMenu = new LauncherMenuGrid(GRID_MENU_ID, 8, 45, 220, 80, 3, 2, "AppGrid", this);
+        // 创建网格菜单 - 2x2网格布局适配更小窗口
+        gridMenu = new LauncherMenuGrid(GRID_MENU_ID, 10, 45, 135, 55, 2, 2, "AppGrid", this);
         uiManager->addWidget(gridMenu);
         
         // 从应用管理器获取应用列表并添加到菜单
@@ -109,7 +109,7 @@ private:
         appManager->getAppList(appList, count);
         
         // 添加应用到网格菜单
-        for (int i = 0; i < count && i < 6; i++) { // 最多显示6个应用（3x2网格）
+        for (int i = 0; i < count && i < 4; i++) { // 最多显示4个应用（2x2网格）
             if (appList[i]) {
                 gridMenu->addItem(appList[i]->displayName, i + 100); // 应用ID从100开始
             }
