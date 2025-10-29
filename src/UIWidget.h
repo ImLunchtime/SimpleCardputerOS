@@ -260,7 +260,7 @@ public:
         
         // 如果有标题，绘制标题栏
         if (!title.isEmpty()) {
-            display->fillRect(x + 1, y + 1, width - 2, 12, TFT_DARKGREY);
+            // display->fillRect(x + 1, y + 1, width - 2, 12, TFT_DARKGREY); 没有背景
             display->setTextColor(TFT_WHITE);
             display->setTextSize(1);
             display->setCursor(x + 5, y + 3);
