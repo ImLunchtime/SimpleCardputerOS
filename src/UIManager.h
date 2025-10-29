@@ -189,6 +189,25 @@ public:
         }
     }
     
+    // 强制刷新屏幕 - 清屏并重绘所有控件
+    void refresh() {
+        clearScreen();
+        drawAll();
+    }
+    
+    // 应用切换管理
+    void switchToApp() {
+        // 清理所有现有控件
+        clear();
+        // 清屏准备绘制新应用界面
+        clearScreen();
+    }
+    
+    void finishAppSetup() {
+        // 应用设置完成后刷新界面
+        drawAll();
+    }
+    
     void drawWidget(int id) {
         UIWidget* widget = getWidget(id);
         if (widget && widget->isVisible()) {

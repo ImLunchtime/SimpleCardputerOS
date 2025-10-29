@@ -1,9 +1,20 @@
 #include "M5Cardputer.h"
-#include "NewTestApp.h"
 #include "EventSystem.h"
+#include "AppManager.h"
+#include "LauncherApp.h"
+#include "MusicApp.h"
+#include "SettingsApp.h"
+#include "TestApp.h"
 
-EventSystem eventSystem;
-NewTestApp appSystem(&eventSystem);
+// 全局对象
+EventSystem globalEventSystem;
+AppManager globalAppManager(&globalEventSystem);
+
+// 应用实例
+LauncherApp launcherApp(&globalEventSystem);
+MusicApp musicApp(&globalEventSystem);
+SettingsApp settingsApp(&globalEventSystem);
+TestApp testApp(&globalEventSystem);
 
 void setup() {
   // 初始化M5Cardputer
@@ -14,8 +25,14 @@ void setup() {
   M5Cardputer.Display.setRotation(1);
   M5Cardputer.Display.setTextSize(1);
   
-  // 初始化应用
-  appSystem.setup();
+  // 注册应用到应用管理器
+  globalAppManager.registerApp("launcher", "Launcher", &launcherApp, true);  // 启动器
+  globalAppManager.registerApp("music", "Music", &musicApp);
+  globalAppManager.registerApp("settings", "Settings", &settingsApp);
+  globalAppManager.registerApp("test", "Test", &testApp);
+  
+  // 初始化应用管理器（启动启动器）
+  globalAppManager.initialize();
 }
 
 void loop() {
@@ -24,12 +41,12 @@ void loop() {
   
   // 检查键盘事件
   KeyEvent event;
-  if (eventSystem.hasKeyEvent(event)) {
-    appSystem.onKeyEvent(event);
+  if (globalEventSystem.hasKeyEvent(event)) {
+    globalAppManager.handleKeyEvent(event);
   }
   
   // 更新当前App
-  appSystem.loop();
+  globalAppManager.update();
   
   delay(50);  // 减少CPU使用
 }
