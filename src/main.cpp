@@ -13,7 +13,7 @@ AppManager globalAppManager(&globalEventSystem);
 
 // 应用实例
 LauncherApp launcherApp(&globalEventSystem);
-MusicApp musicApp(&globalEventSystem);
+MusicApp musicApp(&globalEventSystem, &globalAppManager);
 SettingsApp settingsApp(&globalEventSystem);
 TestApp testApp(&globalEventSystem);
 FileManagerApp fileManagerApp(&globalEventSystem, &globalAppManager);
