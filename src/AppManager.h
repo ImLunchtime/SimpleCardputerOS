@@ -132,6 +132,12 @@ public:
     
     // 处理键盘事件
     void handleKeyEvent(const KeyEvent& event) {
+        // 全局ESC键处理：如果当前不是启动器应用，ESC键退出到启动器
+        if (event.esc && currentApp && currentApp != launcherApp) {
+            returnToLauncher();
+            return;
+        }
+        
         if (currentApp) {
             currentApp->onKeyEvent(event);
         }

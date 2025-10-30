@@ -322,14 +322,37 @@ public:
         if (hasBackgroundLayer && foregroundWidgetCount > 0) {
             // 重建前景层的焦点列表，确保只有前景层控件可以被聚焦
             rebuildFocusListForForeground();
+            // 使用局部重绘绘制前景层，避免闪烁
+            drawForegroundPartial();
+        } else {
+            drawAll();
         }
-        drawAll();
     }
     
     void drawWidget(int id) {
         UIWidget* widget = getWidget(id);
         if (widget && widget->isVisible()) {
             widget->draw(display);
+        }
+    }
+    
+    // 局部重绘单个控件
+    void drawWidgetPartial(int id) {
+        UIWidget* widget = getWidget(id);
+        if (widget && widget->isVisible()) {
+            widget->drawPartial(display);
+        }
+    }
+    
+    // 局部重绘前景层窗口（用于多窗口时避免闪烁）
+    void drawForegroundPartial() {
+        if (hasBackgroundLayer && foregroundWidgetCount > 0) {
+            // 只重绘前景层控件，使用局部重绘
+            for (int i = 0; i < foregroundWidgetCount; i++) {
+                if (foregroundWidgets[i] && foregroundWidgets[i]->isVisible()) {
+                    foregroundWidgets[i]->drawPartial(display);
+                }
+            }
         }
     }
     

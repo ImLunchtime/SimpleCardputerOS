@@ -94,6 +94,8 @@ public:
             } else {
                 batteryLabel->setTextColor(TFT_RED);
             }
+            // 使用局部重绘更新电池电量标签
+            uiManager->drawWidgetPartial(BATTERY_LABEL_ID);
             needsRedraw = true;
         }
         
@@ -101,12 +103,15 @@ public:
         String newVoltageText = String(batteryManager.getBatteryVoltage()) + "mV";
         if (batteryVoltageLabel->getText() != newVoltageText) {
             batteryVoltageLabel->setText(newVoltageText);
+            // 使用局部重绘更新电池电压标签
+            uiManager->drawWidgetPartial(BATTERY_VOLTAGE_LABEL_ID);
             needsRedraw = true;
         }
         
-        // 只有当信息发生变化时才重绘界面
-        if (needsRedraw) {
-            drawInterface();
+        // 如果有前景层窗口，使用局部重绘避免闪烁
+        if (needsRedraw && uiManager) {
+            // 检查是否有前景层，如果有则使用局部重绘
+            // 这里我们不需要调用drawInterface()，因为已经使用了局部重绘
         }
     }
 

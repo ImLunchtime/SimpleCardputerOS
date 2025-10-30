@@ -53,6 +53,18 @@ public:
     virtual bool handleKeyEvent(const KeyEvent& event) = 0;
     virtual void onFocusChanged(bool hasFocus) {}
     
+    // 局部重绘支持
+    virtual void clearArea(LGFX_Device* display) {
+        // 默认实现：用黑色填充控件区域
+        display->fillRect(x, y, width, height, TFT_BLACK);
+    }
+    
+    virtual void drawPartial(LGFX_Device* display) {
+        // 默认实现：先清除区域，再绘制
+        clearArea(display);
+        draw(display);
+    }
+    
     // 菜单控件需要的二级焦点支持
     virtual bool hasSecondaryFocus() const { return false; }
     virtual bool handleSecondaryKeyEvent(const KeyEvent& event) { return false; }
@@ -85,6 +97,14 @@ public:
         display->setTextSize(1);
         display->setCursor(x, y);
         display->print(text);
+    }
+    
+    void drawPartial(LGFX_Device* display) override {
+        if (!visible) return;
+        
+        // 局部重绘：先清除文本区域，再绘制新文本
+        clearArea(display);
+        draw(display);
     }
     
     bool handleKeyEvent(const KeyEvent& event) override {
@@ -268,6 +288,14 @@ public:
             display->setCursor(x + 5, y + 3);
             display->print(title);
         }
+    }
+    
+    void drawPartial(LGFX_Device* display) override {
+        if (!visible) return;
+        
+        // 窗口的局部重绘：先清除整个窗口区域，再重绘
+        clearArea(display);
+        draw(display);
     }
     
     bool handleKeyEvent(const KeyEvent& event) override {

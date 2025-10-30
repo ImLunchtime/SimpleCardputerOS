@@ -12,14 +12,12 @@ private:
     enum ControlIds {
         STATUS_LABEL_ID = 2,
         MENU_LIST_ID = 3,
-        BACK_BUTTON_ID = 4,
         WINDOW_ID = 5
     };
     
     // 控件引用
     UILabel* statusLabel;
     UIMenuList* settingsMenu;
-    UIButton* backButton;
     UIWindow* mainWindow;
     
     // 自定义设置菜单
@@ -30,20 +28,6 @@ private:
         
         void onItemSelected(MenuItem* item) override {
             parentApp->handleSettingSelection(item);
-        }
-        
-    private:
-        SettingsApp* parentApp;
-    };
-    
-    // 自定义返回按钮
-    class BackButton : public UIButton {
-    public:
-        BackButton(int id, int x, int y, int width, int height, const String& text, const String& name, SettingsApp* app)
-            : UIButton(id, x, y, width, height, text, name), parentApp(app) {}
-        
-        void onButtonClick() override {
-            parentApp->returnToLauncher();
         }
         
     private:
@@ -70,10 +54,6 @@ public:
         settingsMenu->addItem("Sound", 102);
         settingsMenu->addItem("Network", 103);
         settingsMenu->addItem("About", 104);
-        
-        // 创建返回按钮
-        backButton = new BackButton(BACK_BUTTON_ID, 35, 90, 60, 15, "Back", "BackButton", this);
-        uiManager->addWidget(backButton);
         
         // 设置菜单颜色
         settingsMenu->setColors(TFT_GREEN, TFT_YELLOW, TFT_WHITE, TFT_DARKGREY);
@@ -110,13 +90,6 @@ public:
                 statusLabel->setText("CardputerOS v1.0 (placeholder)");
                 break;
         }
-    }
-    
-    void returnToLauncher() {
-        statusLabel->setText("Returning to launcher...");
-        drawInterface();
-        delay(300);
-        appManager->returnToLauncher();
     }
 
 private:

@@ -12,30 +12,14 @@ private:
     enum ControlIds {
         STATUS_LABEL_ID = 2,
         INFO_LABEL_ID = 3,
-        BACK_BUTTON_ID = 4,
         WINDOW_ID = 5
     };
     
     // 控件引用
     UILabel* statusLabel;
     UILabel* infoLabel;
-    UIButton* backButton;
     UIWindow* mainWindow;
     
-    // 自定义返回按钮
-    class BackButton : public UIButton {
-    public:
-        BackButton(int id, int x, int y, int width, int height, const String& text, const String& name, TestApp* app)
-            : UIButton(id, x, y, width, height, text, name), parentApp(app) {}
-        
-        void onButtonClick() override {
-            parentApp->returnToLauncher();
-        }
-        
-    private:
-        TestApp* parentApp;
-    };
-
 public:
     TestApp(EventSystem* events) 
         : eventSystem(events) {}
@@ -48,11 +32,7 @@ public:
         statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 35, 35, "Test app ready", "Status");
         
         // 创建信息标签
-        infoLabel = uiManager->createLabel(INFO_LABEL_ID, 35, 50, "Test app placeholder", "Info");
-        
-        // 创建返回按钮
-        backButton = new BackButton(BACK_BUTTON_ID, 35, 85, 80, 20, "Back", "BackButton", this);
-        uiManager->addWidget(backButton);
+        infoLabel = uiManager->createLabel(INFO_LABEL_ID, 35, 50, "Press ESC to exit", "Info");
     }
 
     void loop() override {
@@ -64,13 +44,6 @@ public:
         if (uiManager->handleKeyEvent(event)) {
             drawInterface();
         }
-    }
-    
-    void returnToLauncher() {
-        statusLabel->setText("Returning to launcher...");
-        drawInterface();
-        delay(300);
-        appManager->returnToLauncher();
     }
 
 private:
