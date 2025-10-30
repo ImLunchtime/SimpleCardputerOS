@@ -6,58 +6,86 @@
 #include "SDFileManager.h"
 #include <cstring>  // 为 memset 添加
 
-// 音频库
+// ESP8266Audio 库
 #include <AudioOutput.h>
 #include <AudioFileSourceSD.h>
 #include <AudioFileSourceID3.h>
 #include <AudioGeneratorMP3.h>
 
-// 简化的音频输出类，避免复杂的缓冲区管理
+// FreeRTOS 组件
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+#include "freertos/semphr.h"
+
+// 音频命令枚举
+enum AudioCommand {
+    AUDIO_CMD_PLAY,
+    AUDIO_CMD_PAUSE,
+    AUDIO_CMD_STOP,
+    AUDIO_CMD_NEXT,
+    AUDIO_CMD_PREV,
+    AUDIO_CMD_VOLUME,
+    AUDIO_CMD_SHUTDOWN
+};
+
+// 音频任务命令结构
+struct AudioTaskCommand {
+    AudioCommand cmd;
+    int param;
+    char filePath[256];
+};
+
+// 音频状态结构
+struct MusicAudioStatus {
+    bool isPlaying;
+    bool isPaused;
+    int currentFileIndex;
+    int currentVolume;
+    char currentSongName[128];
+    bool hasError;
+    char errorMessage[128];
+};
+
+// M5Speaker 音频输出类
 class AudioOutputM5Speaker : public AudioOutput {
 public:
     AudioOutputM5Speaker(m5::Speaker_Class* m5sound, uint8_t virtual_sound_channel = 0) {
         _m5sound = m5sound;
         _virtual_ch = virtual_sound_channel;
         _buffer_index = 0;
-        memset(_buffer, 0, sizeof(_buffer));
     }
     
     virtual ~AudioOutputM5Speaker(void) {
-        stop();
     }
     
     virtual bool begin(void) override { 
-        if (!_m5sound) return false;
-        return true; 
+        _buffer_index = 0;
+        return true;
     }
     
     virtual bool ConsumeSample(int16_t sample[2]) override {
-        if (!_m5sound || _buffer_index >= BUFFER_SIZE - 1) {
-            flush();
-            if (_buffer_index >= BUFFER_SIZE - 1) return false;
+        if (_buffer_index < BUFFER_SIZE) {
+            _buffer[_buffer_index++] = sample[0];
+            _buffer[_buffer_index++] = sample[1];
         }
-        
-        _buffer[_buffer_index++] = sample[0];
-        _buffer[_buffer_index++] = sample[1];
         
         if (_buffer_index >= BUFFER_SIZE) {
-            flush();
+            _m5sound->playRaw(_buffer, BUFFER_SIZE, 44100, true, 1, _virtual_ch);
+            _buffer_index = 0;
         }
-        
         return true;
     }
     
     virtual void flush(void) override {
-        if (_buffer_index > 0 && _m5sound) {
-            _m5sound->playRaw(_buffer, _buffer_index, hertz, true, 1, _virtual_ch);
+        if (_buffer_index > 0) {
+            _m5sound->playRaw(_buffer, _buffer_index, 44100, true, 1, _virtual_ch);
             _buffer_index = 0;
         }
     }
     
     virtual bool stop(void) override {
-        if (_m5sound) {
-            _m5sound->stop(_virtual_ch);
-        }
+        _m5sound->stop(_virtual_ch);
         _buffer_index = 0;
         return true;
     }
@@ -76,7 +104,13 @@ private:
     AppManager* appManager;
     SDFileManager fileManager;
     
-    // 自定义音量滑块类
+    // 双核心音频系统组件
+    TaskHandle_t audioTaskHandle;
+    QueueHandle_t audioCommandQueue;
+    SemaphoreHandle_t audioStatusMutex;
+    MusicAudioStatus audioStatus;
+    
+    // 音量滑块类
     class VolumeSlider : public UISlider {
     private:
         MusicApp* musicApp;
@@ -91,7 +125,7 @@ private:
         }
     };
     
-    // 控件ID定义
+    // UI 控件 ID 枚举
     enum ControlIds {
         TITLE_LABEL_ID = 1,
         STATUS_LABEL_ID = 2,
@@ -107,7 +141,7 @@ private:
         VOLUME_SLIDER_ID = 12
     };
     
-    // UI控件
+    // UI 组件
     UILabel* titleLabel;
     UILabel* statusLabel;
     UILabel* songLabel;
@@ -116,21 +150,21 @@ private:
     UIMenuList* playList;
     UIWindow* mainWindow;
     
-    // GUI控制按钮
+    // 控制按钮
     UIButton* playButton;
     UIButton* stopButton;
     UIButton* prevButton;
     UIButton* nextButton;
     VolumeSlider* volumeSlider;
     
-    // 音频相关
+    // 音频组件（仅在主线程使用）
     static constexpr uint8_t m5spk_virtual_channel = 0;
     AudioFileSourceSD* audioFile;
     AudioOutputM5Speaker* audioOutput;
     AudioGeneratorMP3* mp3Generator;
     AudioFileSourceID3* id3Source;
     
-    // 播放状态
+    // 播放状态（主线程）
     bool isPlaying;
     bool isPaused;
     bool isInitialized;
@@ -142,451 +176,49 @@ private:
     FileInfo musicFiles[MAX_MUSIC_FILES];
     int musicFileCount;
     int currentFileIndex;
-    
+
 public:
-    MusicApp(EventSystem* events, AppManager* manager) 
-        : eventSystem(events), appManager(manager), 
-          audioFile(nullptr), audioOutput(nullptr), mp3Generator(nullptr), id3Source(nullptr),
-          isPlaying(false), isPaused(false), isInitialized(false), pausedPosition(0),
-          currentVolume(50), musicFileCount(0), currentFileIndex(0) {
-        uiManager = appManager->getUIManager();
-    }
+    MusicApp(EventSystem* events, AppManager* manager);
+    ~MusicApp();
     
-    ~MusicApp() {
-        cleanup();
-    }
-
-    void setup() override {
-        // 创建主窗口
-        mainWindow = new UIWindow(WINDOW_ID, 0, 0, 240, 135);
-        uiManager->addWidget(mainWindow);
-        
-        // 创建标题
-        titleLabel = new UILabel(TITLE_LABEL_ID, 5, 5, "Music Player");
-        titleLabel->setTextColor(TFT_WHITE);
-        uiManager->addWidget(titleLabel);
-        
-        // 创建歌曲信息标签
-        songLabel = new UILabel(SONG_LABEL_ID, 5, 20, "No song loaded");
-        songLabel->setTextColor(TFT_YELLOW);
-        uiManager->addWidget(songLabel);
-        
-        // 创建播放列表
-        playList = new UIMenuList(PLAYLIST_ID, 5, 35, 230, 45);
-        playList->setColors(TFT_WHITE, TFT_BLUE, TFT_WHITE, TFT_DARKGREY);
-        uiManager->addWidget(playList);
-        
-        // 创建播放控制按钮
-        playButton = new UIButton(PLAY_BUTTON_ID, 10, 120, 60, 20, "Play", "playButton");
-        playButton->setBorderColor(TFT_GREEN);
-        playButton->setTextColor(TFT_WHITE);
-        uiManager->addWidget(playButton);
-        
-        stopButton = new UIButton(STOP_BUTTON_ID, 80, 120, 60, 20, "Stop", "stopButton");
-        stopButton->setBorderColor(TFT_RED);
-        stopButton->setTextColor(TFT_WHITE);
-        uiManager->addWidget(stopButton);
-        
-        prevButton = new UIButton(PREV_BUTTON_ID, 150, 120, 60, 20, "Prev", "prevButton");
-        prevButton->setBorderColor(TFT_BLUE);
-        prevButton->setTextColor(TFT_WHITE);
-        uiManager->addWidget(prevButton);
-        
-        nextButton = new UIButton(NEXT_BUTTON_ID, 220, 120, 60, 20, "Next", "nextButton");
-        nextButton->setBorderColor(TFT_BLUE);
-        nextButton->setTextColor(TFT_WHITE);
-        uiManager->addWidget(nextButton);
-        
-        // 创建音量滑块
-        volumeSlider = new VolumeSlider(VOLUME_SLIDER_ID, 5, 105, 150, 15, 0, 100, currentVolume, "Volume", this);
-        volumeSlider->setColors(TFT_DARKGREY, TFT_WHITE, TFT_YELLOW);
-        uiManager->addWidget(volumeSlider);
-        
-        // 创建状态标签
-        statusLabel = new UILabel(STATUS_LABEL_ID, 5, 125, "Initializing...");
-        statusLabel->setTextColor(TFT_GREEN);
-        uiManager->addWidget(statusLabel);
-        
-        // 设置焦点
-        uiManager->nextFocus();
-        
-        // 初始化音频系统
-        initializeAudio();
-        
-        // 扫描音乐文件
-        scanMusicFiles();
-        
-        drawInterface();
-    }
-
-    void loop() override {
-        // 处理音频播放
-        if (mp3Generator && mp3Generator->isRunning()) {
-            if (!mp3Generator->loop()) {
-                stopPlayback();
-                playNext(); // 自动播放下一首
-            }
-        }
-    }
-
-    void onKeyEvent(const KeyEvent& event) override {
-        // 处理按钮点击
-        if (event.enter) {
-            UIWidget* focusedWidget = uiManager->getCurrentFocusedWidget();
-            if (focusedWidget) {
-                switch (focusedWidget->getId()) {
-                    case PLAY_BUTTON_ID:
-                        if (isPlaying) {
-                            pausePlayback();
-                        } else if (isPaused) {
-                            resumePlayback();
-                        } else {
-                            playCurrentSong();
-                        }
-                        break;
-                    case STOP_BUTTON_ID:
-                        stopPlayback();
-                        break;
-                    case PREV_BUTTON_ID:
-                        playPrevious();
-                        break;
-                    case NEXT_BUTTON_ID:
-                        playNext();
-                        break;
-                    case PLAYLIST_ID:
-                        playSelectedSong();
-                        break;
-                }
-            }
-        }
-        
-        // 处理文本输入（保留一些快捷键）
-        if (!event.text.isEmpty()) {
-            char key = event.text.charAt(0);
-            switch (key) {
-                case ' ': // 空格键 - 播放/暂停
-                    if (isPlaying) {
-                        pausePlayback();
-                    } else if (isPaused) {
-                        resumePlayback();
-                    } else {
-                        playCurrentSong();
-                    }
-                    break;
-                    
-                case 'p': // P键 - 暂停
-                    if (isPlaying) {
-                        pausePlayback();
-                    }
-                    break;
-                    
-                case 'n': // N键 - 下一首
-                    playNext();
-                    break;
-                    
-                case 'b': // B键 - 上一首
-                    playPrevious();
-                    break;
-                    
-                case ';': // 分号 - 音量+ (也是up键)
-                    adjustVolume(10);
-                    break;
-                    
-                case '.': // 句号 - 音量- (也是down键)
-                    adjustVolume(-10);
-                    break;
-            }
-        }
-        
-        if (event.up || event.down) { // 上下箭头 - 列表导航
-            // 将事件传递给UI管理器处理列表导航
-            if (uiManager->handleKeyEvent(event)) {
-                drawInterface();
-            }
-        }
-        
-        // 将事件传递给UI管理器处理
-        if (uiManager->handleKeyEvent(event)) {
-            drawInterface();
-        }
-    }
+    void setup() override;
+    void loop() override;
+    void onKeyEvent(const KeyEvent& event) override;
 
 private:
-    void initializeAudio() {
-        // 清理之前的资源
-        cleanup();
-        
-        // 初始化SD卡
-        if (!fileManager.initialize()) {
-            statusLabel->setText("SD card initialization failed!");
-            return;
-        }
-        
-        // 创建音频组件，添加错误检查
-        try {
-            audioFile = new AudioFileSourceSD();
-            if (!audioFile) {
-                statusLabel->setText("Failed to create audio file source");
-                return;
-            }
-            
-            audioOutput = new AudioOutputM5Speaker(&M5Cardputer.Speaker, m5spk_virtual_channel);
-            if (!audioOutput) {
-                statusLabel->setText("Failed to create audio output");
-                cleanup();
-                return;
-            }
-            
-            if (!audioOutput->begin()) {
-                statusLabel->setText("Failed to initialize audio output");
-                cleanup();
-                return;
-            }
-            
-            mp3Generator = new AudioGeneratorMP3();
-            if (!mp3Generator) {
-                statusLabel->setText("Failed to create MP3 generator");
-                cleanup();
-                return;
-            }
-            
-            // 设置音量
-            M5Cardputer.Speaker.setVolume(currentVolume);
-            
-            isInitialized = true;
-            statusLabel->setText("Audio system ready");
-            
-        } catch (...) {
-            statusLabel->setText("Audio initialization failed");
-            cleanup();
-            return;
-        }
-    }
+    // 双核心音频系统方法
+    void initializeDualCoreAudio();
+    void sendAudioCommand(AudioCommand cmd, int param = 0, const char* filePath = nullptr);
+    void updateAudioStatus();
+    void handleNextPrevRequests();
+    void playNextSong();
+    void playPreviousSong();
+    void updateUIFromAudioStatus();
     
-    void scanMusicFiles() {
-        if (!isInitialized) return;
-        
-        statusLabel->setText("Scanning for music files...");
-        drawInterface();
-        
-        // 扫描所有MP3文件
-        musicFileCount = 0;
-        fileManager.scanAllFiles(musicFiles, musicFileCount, MAX_MUSIC_FILES, ".mp3");
-        
-        // 更新播放列表
-        playList->clear();
-        for (int i = 0; i < musicFileCount; i++) {
-            String displayName = musicFiles[i].name;
-            // 移除.mp3扩展名
-            if (displayName.endsWith(".mp3")) {
-                displayName = displayName.substring(0, displayName.length() - 4);
-            }
-            playList->addItem("♪ " + displayName, i, "");
-        }
-        
-        if (musicFileCount > 0) {
-            statusLabel->setText("Found " + String(musicFileCount) + " music files");
-            currentFileIndex = 0;
-            updateSongInfo();
-        } else {
-            statusLabel->setText("No MP3 files found");
-        }
-    }
+    // 音频任务方法
+    static void audioTaskFunction(void* parameter);
+    void processAudioCommands();
+    void playAudioFile(const char* filePath);
+    void pauseAudioPlayback();
+    void resumeAudioPlayback();
+    void stopAudioPlayback();
+    void playNextAudio();
+    void playPreviousAudio();
+    void setAudioVolume(int volume);
+    void updateAudioStatus(bool playing, bool paused, const char* songPath);
+    void updateAudioError(const char* errorMsg);
+    void cleanupAudioTask();
     
-    void playCurrentSong() {
-        if (!isInitialized || musicFileCount == 0 || !audioFile || !audioOutput || !mp3Generator) {
-            statusLabel->setText("Audio system not ready");
-            return;
-        }
-        
-        stopPlayback(); // 停止当前播放
-        
-        String filePath = musicFiles[currentFileIndex].path;
-        
-        // 打开音频文件
-        if (!audioFile->open(filePath.c_str())) {
-            statusLabel->setText("Failed to open: " + musicFiles[currentFileIndex].name);
-            return;
-        }
-        
-        // 创建ID3源，添加错误检查
-        try {
-            id3Source = new AudioFileSourceID3(audioFile);
-            if (!id3Source) {
-                statusLabel->setText("Failed to create ID3 source");
-                audioFile->close();
-                return;
-            }
-            
-            id3Source->RegisterMetadataCB(metadataCallback, this);
-            
-            // 开始播放
-            if (mp3Generator->begin(id3Source, audioOutput)) {
-                isPlaying = true;
-                isPaused = false;
-                statusLabel->setText("Playing: " + musicFiles[currentFileIndex].name);
-                updateSongInfo();
-                updateButtonStates();
-            } else {
-                statusLabel->setText("Failed to start playback");
-                if (id3Source) {
-                    delete id3Source;
-                    id3Source = nullptr;
-                }
-                audioFile->close();
-            }
-        } catch (...) {
-            statusLabel->setText("Playback initialization failed");
-            if (id3Source) {
-                delete id3Source;
-                id3Source = nullptr;
-            }
-            audioFile->close();
-        }
-    }
-    
-    void playSelectedSong() {
-        MenuItem* selectedItem = playList->getSelectedItem();
-        if (selectedItem && selectedItem->id >= 0 && selectedItem->id < musicFileCount) {
-            currentFileIndex = selectedItem->id;
-            playCurrentSong();
-        }
-    }
-    
-    void pausePlayback() {
-        if (isPlaying && id3Source) {
-            pausedPosition = id3Source->getPos();
-            mp3Generator->stop();
-            isPlaying = false;
-            isPaused = true;
-            statusLabel->setText("Paused: " + musicFiles[currentFileIndex].name);
-            updateButtonStates();
-        }
-    }
-    
-    void resumePlayback() {
-        if (isPaused && !isPlaying) {
-            // 重新开始播放（从暂停位置）
-            playCurrentSong();
-            if (id3Source && pausedPosition > 0) {
-                id3Source->seek(pausedPosition, 1);
-            }
-        }
-    }
-    
-    void stopPlayback() {
-        if (mp3Generator && isPlaying) {
-            mp3Generator->stop();
-        }
-        
-        if (audioOutput) {
-            audioOutput->stop();
-        }
-        
-        if (id3Source) {
-            id3Source->close();
-            delete id3Source;
-            id3Source = nullptr;
-        }
-        
-        if (audioFile) {
-            audioFile->close();
-        }
-        
-        isPlaying = false;
-        isPaused = false;
-        pausedPosition = 0;
-        updateButtonStates();
-    }
-    
-    void playNext() {
-        if (musicFileCount == 0) return;
-        
-        currentFileIndex = (currentFileIndex + 1) % musicFileCount;
-        playCurrentSong();
-    }
-    
-    void playPrevious() {
-        if (musicFileCount == 0) return;
-        
-        currentFileIndex = (currentFileIndex - 1 + musicFileCount) % musicFileCount;
-        playCurrentSong();
-    }
-    
-    void adjustVolume(int delta) {
-        currentVolume += delta;
-        if (currentVolume < 0) currentVolume = 0;
-        if (currentVolume > 255) currentVolume = 255;
-        
-        M5Cardputer.Speaker.setVolume(currentVolume);
-        volumeLabel->setText("Volume: " + String(currentVolume));
-    }
-    
-    void setVolume(int volume) {
-        currentVolume = volume;
-        if (currentVolume < 0) currentVolume = 0;
-        if (currentVolume > 100) currentVolume = 100;
-        
-        // 将0-100范围映射到0-255
-        int mappedVolume = (currentVolume * 255) / 100;
-        M5Cardputer.Speaker.setVolume(mappedVolume);
-    }
-    
-    void updateButtonStates() {
-        if (playButton) {
-            if (isPlaying) {
-                playButton->setText("Pause");
-            } else {
-                playButton->setText("Play");
-            }
-        }
-    }
-    
-    void updateSongInfo() {
-        if (musicFileCount > 0 && currentFileIndex >= 0 && currentFileIndex < musicFileCount) {
-            String info = "(" + String(currentFileIndex + 1) + "/" + String(musicFileCount) + ") ";
-            info += musicFiles[currentFileIndex].name;
-            songLabel->setText(info);
-            
-            // 注意：UIMenuList会自动管理选中项，不需要手动设置
-        }
-    }
-    
-    void cleanup() {
-        // 首先停止播放
-        stopPlayback();
-        
-        // 清理音频组件，按正确顺序
-        if (mp3Generator) {
-            delete mp3Generator;
-            mp3Generator = nullptr;
-        }
-        
-        if (audioOutput) {
-            audioOutput->stop();
-            delete audioOutput;
-            audioOutput = nullptr;
-        }
-        
-        if (audioFile) {
-            delete audioFile;
-            audioFile = nullptr;
-        }
-        
-        // 重置状态
-        isInitialized = false;
-        isPlaying = false;
-        isPaused = false;
-        pausedPosition = 0;
-    }
-    
-    void drawInterface() {
-        uiManager->refresh();
-    }
+    // 主线程方法
+    void scanMusicFiles();
+    void playCurrentSong();
+    void playSelectedSong();
+    void adjustVolume(int delta);
+    void setVolume(int volume);
+    void updateSongInfo();
+    void cleanup();
+    void drawInterface();
     
     // 静态回调函数
-    static void metadataCallback(void *cbData, const char *type, bool isUnicode, const char *string) {
-        // 可以在这里处理ID3标签信息
-        // 暂时不做处理，避免复杂化
-    }
+    static void metadataCallback(void *cbData, const char *type, bool isUnicode, const char *string);
 };
