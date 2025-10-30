@@ -103,85 +103,94 @@ private:
         
         if (sdInitialized) {
             statusLabel->setText("SD card ready. Use arrows to navigate, Enter to select");
+            refreshFileList();
         } else {
             statusLabel->setText("SD card initialization failed!");
         }
     }
     
     void refreshFileList() {
-        if (!sdInitialized) {
-            fileList->clear();
-            fileList->addItem("SD card not available", -1);
+        fileList->clear();
+        fileCount = 0;
+        
+        if (!fileManager.isInitialized()) {
+            statusLabel->setText("SD card not initialized");
             return;
         }
         
-        // 清空列表
-        fileList->clear();
-        
-        // 获取当前路径
         String currentPath = fileManager.getCurrentPath();
-        pathLabel->setText(currentPath);
+        pathLabel->setText("Path: " + currentPath);
         
         // 获取文件列表
-        if (fileManager.listCurrentDirectory(files, fileCount, MAX_FILES)) {
-            for (int i = 0; i < fileCount; i++) {
-                String displayName = files[i].name;
-                
-                if (files[i].isDirectory) {
-                    if (files[i].name == "..") {
-                        displayName = "[..] (Parent Directory)";
-                    } else {
-                        displayName = "[DIR] " + files[i].name;
-                    }
-                } else {
-                    // 显示文件大小
-                    String sizeStr = formatFileSize(files[i].size);
-                    displayName = files[i].name + " (" + sizeStr + ")";
-                    
-                    // 标记音频文件
-                    if (fileManager.isAudioFile(files[i].name)) {
-                        displayName = "♪ " + displayName;
-                    }
-                }
-                
-                fileList->addItem(displayName, i);
-            }
-        } else {
-            fileList->addItem("Error reading directory", -1);
+        bool success = fileManager.listCurrentDirectory(files, fileCount, MAX_FILES);
+        
+        if (!success) {
+            statusLabel->setText("Failed to read directory: " + currentPath);
+            fileList->addItem("Error reading directory", -1, "");
+            return;
         }
         
-        // 重置选择 - 通过访问protected成员selectedIndex
-        // 注意：这需要添加一个公共方法来设置选择索引
+        if (fileCount == 0) {
+            statusLabel->setText("Directory is empty: " + currentPath);
+            return;
+        }
+        
+        // 添加文件到列表
+        for (int i = 0; i < fileCount; i++) {
+            String displayName;
+            
+            if (files[i].isDirectory) {
+                if (files[i].name == "..") {
+                    displayName = "[..] (Up)";
+                } else {
+                    displayName = "[" + files[i].name + "]";
+                }
+            } else {
+                displayName = files[i].name;
+                if (fileManager.isAudioFile(files[i].name)) {
+                    displayName = "♪ " + displayName;
+                }
+            }
+            
+            fileList->addItem(displayName, i, "");
+        }
+        
+        statusLabel->setText("Loaded " + String(fileCount) + " items from " + currentPath);
     }
     
     void handleFileSelection() {
-        if (!sdInitialized || fileCount == 0) return;
+        if (!fileManager.isInitialized()) {
+            statusLabel->setText("SD card not initialized");
+            return;
+        }
         
         MenuItem* selectedItem = fileList->getSelectedItem();
-        if (!selectedItem) return;
+        if (!selectedItem) {
+            statusLabel->setText("No item selected");
+            return;
+        }
         
         int selectedIndex = selectedItem->id;
-        if (selectedIndex < 0 || selectedIndex >= fileCount) return;
+        if (selectedIndex < 0 || selectedIndex >= fileCount) {
+            statusLabel->setText("Invalid selection index");
+            return;
+        }
         
         FileInfo& selectedFile = files[selectedIndex];
         
         if (selectedFile.isDirectory) {
-            // 进入目录
-            if (fileManager.enterDirectory(selectedFile.name)) {
+            bool success = fileManager.enterDirectory(selectedFile.name);
+            
+            if (success) {
+                String newPath = fileManager.getCurrentPath();
+                statusLabel->setText("Entered: " + newPath);
                 refreshFileList();
-                statusLabel->setText("Entered directory: " + selectedFile.name);
             } else {
-                statusLabel->setText("Failed to enter directory");
+                statusLabel->setText("Failed to enter: " + selectedFile.name);
             }
         } else {
-            // 显示文件信息
-            String info = "File: " + selectedFile.name + " Size: " + formatFileSize(selectedFile.size);
+            String info = "File: " + selectedFile.name + " (" + String(selectedFile.size) + " bytes)";
             statusLabel->setText(info);
-            
-            // 如果是音频文件，可以在这里添加播放逻辑
-            if (fileManager.isAudioFile(selectedFile.name)) {
-                // TODO: 集成音频播放功能
-            }
         }
     }
     
