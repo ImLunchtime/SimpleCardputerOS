@@ -9,7 +9,8 @@ enum UIWidgetType {
     WIDGET_INPUT,
     WIDGET_WINDOW,
     WIDGET_MENU_LIST,
-    WIDGET_MENU_GRID
+    WIDGET_MENU_GRID,
+    WIDGET_SLIDER
 };
 
 // UI控件基类
@@ -426,6 +427,122 @@ protected:
             display->drawRect(x - 1, y - 1, width + 2, height + 2, focusColor);
             display->drawRect(x - 2, y - 2, width + 4, height + 4, focusColor);
         }
+    }
+};
+
+// 滑块控件
+class UISlider : public UIWidget {
+private:
+    int minValue;
+    int maxValue;
+    int currentValue;
+    uint16_t trackColor;
+    uint16_t thumbColor;
+    uint16_t focusColor;
+    String label;
+    bool showValue;
+    
+public:
+    UISlider(int id, int x, int y, int width, int height, int min, int max, int initial, const String& _label = "", const String& name = "")
+        : UIWidget(id, WIDGET_SLIDER, x, y, width, height, name, true),
+          minValue(min), maxValue(max), currentValue(initial), 
+          trackColor(TFT_DARKGREY), thumbColor(TFT_WHITE), focusColor(TFT_YELLOW),
+          label(_label), showValue(true) {
+        
+        // 确保初始值在范围内
+        if (currentValue < minValue) currentValue = minValue;
+        if (currentValue > maxValue) currentValue = maxValue;
+    }
+    
+    void setValue(int value) {
+        if (value < minValue) value = minValue;
+        if (value > maxValue) value = maxValue;
+        if (currentValue != value) {
+            currentValue = value;
+            onValueChanged(currentValue);
+        }
+    }
+    
+    int getValue() const { return currentValue; }
+    void setRange(int min, int max) { 
+        minValue = min; 
+        maxValue = max; 
+        if (currentValue < minValue) setValue(minValue);
+        if (currentValue > maxValue) setValue(maxValue);
+    }
+    
+    void setColors(uint16_t track, uint16_t thumb, uint16_t focus) {
+        trackColor = track;
+        thumbColor = thumb;
+        focusColor = focus;
+    }
+    
+    void setShowValue(bool show) { showValue = show; }
+    void setLabel(const String& newLabel) { label = newLabel; }
+    
+    void draw(LGFX_Device* display) override {
+        if (!visible) return;
+        
+        // 绘制标签
+        if (label.length() > 0) {
+            display->setTextColor(TFT_WHITE);
+            display->setTextSize(1);
+            display->setCursor(x, y - 12);
+            display->print(label);
+        }
+        
+        // 计算滑块轨道区域
+        int trackY = y + (height - 4) / 2;
+        int trackHeight = 4;
+        
+        // 绘制轨道
+        uint16_t borderColor = focused ? focusColor : TFT_WHITE;
+        display->drawRect(x, trackY, width, trackHeight, borderColor);
+        display->fillRect(x + 1, trackY + 1, width - 2, trackHeight - 2, trackColor);
+        
+        // 计算滑块位置
+        int range = maxValue - minValue;
+        int thumbX = x;
+        if (range > 0) {
+            thumbX = x + ((currentValue - minValue) * (width - 8)) / range;
+        }
+        
+        // 绘制滑块
+        uint16_t currentThumbColor = focused ? focusColor : thumbColor;
+        display->fillRect(thumbX, y, 8, height, currentThumbColor);
+        display->drawRect(thumbX, y, 8, height, TFT_BLACK);
+        
+        // 显示数值
+        if (showValue) {
+            display->setTextColor(TFT_WHITE);
+            display->setTextSize(1);
+            String valueText = String(currentValue);
+            int textWidth = valueText.length() * 6;
+            display->setCursor(x + width - textWidth, y + height + 2);
+            display->print(valueText);
+        }
+    }
+    
+    bool handleKeyEvent(const KeyEvent& event) override {
+        if (!focused) return false;
+        
+        bool handled = false;
+        int step = (maxValue - minValue) / 20; // 5%步长
+        if (step < 1) step = 1;
+        
+        if (event.left) {
+            setValue(currentValue - step);
+            handled = true;
+        } else if (event.right) {
+            setValue(currentValue + step);
+            handled = true;
+        }
+        
+        return handled;
+    }
+    
+    virtual void onValueChanged(int newValue) {
+        // 子类可以重写此方法来处理值变化
     }
 };
 

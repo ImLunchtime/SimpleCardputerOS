@@ -76,6 +76,21 @@ private:
     AppManager* appManager;
     SDFileManager fileManager;
     
+    // 自定义音量滑块类
+    class VolumeSlider : public UISlider {
+    private:
+        MusicApp* musicApp;
+    public:
+        VolumeSlider(int id, int x, int y, int width, int height, int min, int max, int initial, const String& label, MusicApp* app)
+            : UISlider(id, x, y, width, height, min, max, initial, label), musicApp(app) {}
+        
+        void onValueChanged(int newValue) override {
+            if (musicApp) {
+                musicApp->setVolume(newValue);
+            }
+        }
+    };
+    
     // 控件ID定义
     enum ControlIds {
         TITLE_LABEL_ID = 1,
@@ -84,7 +99,12 @@ private:
         CONTROL_LABEL_ID = 4,
         VOLUME_LABEL_ID = 5,
         PLAYLIST_ID = 6,
-        WINDOW_ID = 7
+        WINDOW_ID = 7,
+        PLAY_BUTTON_ID = 8,
+        STOP_BUTTON_ID = 9,
+        PREV_BUTTON_ID = 10,
+        NEXT_BUTTON_ID = 11,
+        VOLUME_SLIDER_ID = 12
     };
     
     // UI控件
@@ -95,6 +115,13 @@ private:
     UILabel* volumeLabel;
     UIMenuList* playList;
     UIWindow* mainWindow;
+    
+    // GUI控制按钮
+    UIButton* playButton;
+    UIButton* stopButton;
+    UIButton* prevButton;
+    UIButton* nextButton;
+    VolumeSlider* volumeSlider;
     
     // 音频相关
     static constexpr uint8_t m5spk_virtual_channel = 0;
@@ -145,24 +172,40 @@ public:
         uiManager->addWidget(songLabel);
         
         // 创建播放列表
-        playList = new UIMenuList(PLAYLIST_ID, 5, 35, 230, 60);
+        playList = new UIMenuList(PLAYLIST_ID, 5, 35, 230, 45);
         playList->setColors(TFT_WHITE, TFT_BLUE, TFT_WHITE, TFT_DARKGREY);
         uiManager->addWidget(playList);
         
+        // 创建播放控制按钮
+        playButton = new UIButton(PLAY_BUTTON_ID, 10, 120, 60, 20, "Play", "playButton");
+        playButton->setBorderColor(TFT_GREEN);
+        playButton->setTextColor(TFT_WHITE);
+        uiManager->addWidget(playButton);
+        
+        stopButton = new UIButton(STOP_BUTTON_ID, 80, 120, 60, 20, "Stop", "stopButton");
+        stopButton->setBorderColor(TFT_RED);
+        stopButton->setTextColor(TFT_WHITE);
+        uiManager->addWidget(stopButton);
+        
+        prevButton = new UIButton(PREV_BUTTON_ID, 150, 120, 60, 20, "Prev", "prevButton");
+        prevButton->setBorderColor(TFT_BLUE);
+        prevButton->setTextColor(TFT_WHITE);
+        uiManager->addWidget(prevButton);
+        
+        nextButton = new UIButton(NEXT_BUTTON_ID, 220, 120, 60, 20, "Next", "nextButton");
+        nextButton->setBorderColor(TFT_BLUE);
+        nextButton->setTextColor(TFT_WHITE);
+        uiManager->addWidget(nextButton);
+        
+        // 创建音量滑块
+        volumeSlider = new VolumeSlider(VOLUME_SLIDER_ID, 5, 105, 150, 15, 0, 100, currentVolume, "Volume", this);
+        volumeSlider->setColors(TFT_DARKGREY, TFT_WHITE, TFT_YELLOW);
+        uiManager->addWidget(volumeSlider);
+        
         // 创建状态标签
-        statusLabel = new UILabel(STATUS_LABEL_ID, 5, 100, "Initializing...");
+        statusLabel = new UILabel(STATUS_LABEL_ID, 5, 125, "Initializing...");
         statusLabel->setTextColor(TFT_GREEN);
         uiManager->addWidget(statusLabel);
-        
-        // 创建控制说明
-        controlLabel = new UILabel(CONTROL_LABEL_ID, 5, 115, "Space:Play P:Pause N:Next B:Prev");
-        controlLabel->setTextColor(TFT_CYAN);
-        uiManager->addWidget(controlLabel);
-        
-        // 创建音量标签
-        volumeLabel = new UILabel(VOLUME_LABEL_ID, 5, 125, "Volume: 50");
-        volumeLabel->setTextColor(TFT_MAGENTA);
-        uiManager->addWidget(volumeLabel);
         
         // 设置焦点
         uiManager->nextFocus();
@@ -187,7 +230,37 @@ public:
     }
 
     void onKeyEvent(const KeyEvent& event) override {
-        // 处理文本输入
+        // 处理按钮点击
+        if (event.enter) {
+            UIWidget* focusedWidget = uiManager->getCurrentFocusedWidget();
+            if (focusedWidget) {
+                switch (focusedWidget->getId()) {
+                    case PLAY_BUTTON_ID:
+                        if (isPlaying) {
+                            pausePlayback();
+                        } else if (isPaused) {
+                            resumePlayback();
+                        } else {
+                            playCurrentSong();
+                        }
+                        break;
+                    case STOP_BUTTON_ID:
+                        stopPlayback();
+                        break;
+                    case PREV_BUTTON_ID:
+                        playPrevious();
+                        break;
+                    case NEXT_BUTTON_ID:
+                        playNext();
+                        break;
+                    case PLAYLIST_ID:
+                        playSelectedSong();
+                        break;
+                }
+            }
+        }
+        
+        // 处理文本输入（保留一些快捷键）
         if (!event.text.isEmpty()) {
             char key = event.text.charAt(0);
             switch (key) {
@@ -223,11 +296,6 @@ public:
                     adjustVolume(-10);
                     break;
             }
-        }
-        
-        // 处理特殊键
-        if (event.enter) { // 回车 - 播放选中的歌曲
-            playSelectedSong();
         }
         
         if (event.up || event.down) { // 上下箭头 - 列表导航
@@ -358,6 +426,7 @@ private:
                 isPaused = false;
                 statusLabel->setText("Playing: " + musicFiles[currentFileIndex].name);
                 updateSongInfo();
+                updateButtonStates();
             } else {
                 statusLabel->setText("Failed to start playback");
                 if (id3Source) {
@@ -391,6 +460,7 @@ private:
             isPlaying = false;
             isPaused = true;
             statusLabel->setText("Paused: " + musicFiles[currentFileIndex].name);
+            updateButtonStates();
         }
     }
     
@@ -426,6 +496,7 @@ private:
         isPlaying = false;
         isPaused = false;
         pausedPosition = 0;
+        updateButtonStates();
     }
     
     void playNext() {
@@ -449,6 +520,26 @@ private:
         
         M5Cardputer.Speaker.setVolume(currentVolume);
         volumeLabel->setText("Volume: " + String(currentVolume));
+    }
+    
+    void setVolume(int volume) {
+        currentVolume = volume;
+        if (currentVolume < 0) currentVolume = 0;
+        if (currentVolume > 100) currentVolume = 100;
+        
+        // 将0-100范围映射到0-255
+        int mappedVolume = (currentVolume * 255) / 100;
+        M5Cardputer.Speaker.setVolume(mappedVolume);
+    }
+    
+    void updateButtonStates() {
+        if (playButton) {
+            if (isPlaying) {
+                playButton->setText("Pause");
+            } else {
+                playButton->setText("Play");
+            }
+        }
     }
     
     void updateSongInfo() {
