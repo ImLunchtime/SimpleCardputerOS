@@ -38,6 +38,12 @@ MusicApp::~MusicApp() {
 }
 
 void MusicApp::setup() {
+    // 配置 M5Cardputer 扬声器 - 使用更高的采样率提升音质
+    auto spk_cfg = M5Cardputer.Speaker.config();
+    spk_cfg.sample_rate = 128000; // 使用 128kHz 采样率，与参考实现一致
+    spk_cfg.task_pinned_core = APP_CPU_NUM;
+    M5Cardputer.Speaker.config(spk_cfg);
+    
     // 创建主窗口
     mainWindow = new UIWindow(WINDOW_ID, 0, 0, 240, 135);
     uiManager->addWidget(mainWindow);
@@ -397,14 +403,13 @@ void MusicApp::processAudioCommands() {
         return;
     }
     
-    // 设置音频输出参数
-    audioOutput->SetGain(0.1f); // 降低增益避免溢出
-    audioOutput->SetRate(44100);
-    audioOutput->SetBitsPerSample(16);
-    audioOutput->SetChannels(2);
+    // 设置音频输出参数 - 使用标准的 44.1kHz 采样率
+    audioOutput->SetRate(44100);        // MP3 标准采样率
+    audioOutput->SetBitsPerSample(16);  // 16位采样
+    audioOutput->SetChannels(2);        // 立体声
     
     while (true) {
-        // 处理音频播放循环
+        // 处理音频播放循环 - 高优先级，减少延迟
         if (mp3Generator && mp3Generator->isRunning()) {
             if (!mp3Generator->loop()) {
                 // 歌曲播放完毕，停止播放并通知主线程
@@ -414,8 +419,8 @@ void MusicApp::processAudioCommands() {
             }
         }
         
-        // 检查命令队列
-        if (xQueueReceive(audioCommandQueue, &command, pdMS_TO_TICKS(10)) == pdTRUE) {
+        // 检查命令队列 - 使用较短的超时时间
+        if (xQueueReceive(audioCommandQueue, &command, pdMS_TO_TICKS(1)) == pdTRUE) {
             switch (command.cmd) {
                 case AUDIO_CMD_PLAY:
                     if (strlen(command.filePath) > 0) {
@@ -449,8 +454,8 @@ void MusicApp::processAudioCommands() {
             }
         }
         
-        // 增加延迟，减少CPU使用率
-        vTaskDelay(pdMS_TO_TICKS(10));
+        // 减少延迟，提高音频处理性能
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
 
