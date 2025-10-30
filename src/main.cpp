@@ -5,6 +5,7 @@
 #include "MusicApp.h"
 #include "SettingsApp.h"
 #include "TestApp.h"
+#include "FileManagerApp.h"
 
 // 全局对象
 EventSystem globalEventSystem;
@@ -15,6 +16,7 @@ LauncherApp launcherApp(&globalEventSystem);
 MusicApp musicApp(&globalEventSystem);
 SettingsApp settingsApp(&globalEventSystem);
 TestApp testApp(&globalEventSystem);
+FileManagerApp fileManagerApp(&globalEventSystem, &globalAppManager);
 
 void setup() {
   // 初始化M5Cardputer
@@ -30,6 +32,7 @@ void setup() {
   globalAppManager.registerApp("music", "Music", &musicApp);
   globalAppManager.registerApp("settings", "Settings", &settingsApp);
   globalAppManager.registerApp("test", "Test", &testApp);
+  globalAppManager.registerApp("filemanager", "File Manager", &fileManagerApp);
   
   // 初始化应用管理器（启动启动器）
   globalAppManager.initialize();
