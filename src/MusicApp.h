@@ -130,14 +130,9 @@ private:
         TITLE_LABEL_ID = 1,
         STATUS_LABEL_ID = 2,
         SONG_LABEL_ID = 3,
-        CONTROL_LABEL_ID = 4,
         VOLUME_LABEL_ID = 5,
         PLAYLIST_ID = 6,
         WINDOW_ID = 7,
-        PLAY_BUTTON_ID = 8,
-        STOP_BUTTON_ID = 9,
-        PREV_BUTTON_ID = 10,
-        NEXT_BUTTON_ID = 11,
         VOLUME_SLIDER_ID = 12
     };
     
@@ -145,16 +140,11 @@ private:
     UILabel* titleLabel;
     UILabel* statusLabel;
     UILabel* songLabel;
-    UILabel* controlLabel;
     UILabel* volumeLabel;
     UIMenuList* playList;
     UIWindow* mainWindow;
     
-    // 控制按钮
-    UIButton* playButton;
-    UIButton* stopButton;
-    UIButton* prevButton;
-    UIButton* nextButton;
+    // 音量控制
     VolumeSlider* volumeSlider;
     
     // 音频组件（仅在主线程使用）

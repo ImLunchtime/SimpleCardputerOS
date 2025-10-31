@@ -44,53 +44,32 @@ void MusicApp::setup() {
     spk_cfg.task_pinned_core = APP_CPU_NUM;
     M5Cardputer.Speaker.config(spk_cfg);
     
-    // 创建主窗口
-    mainWindow = new UIWindow(WINDOW_ID, 0, 0, 240, 135);
+    // 创建主窗口 - 更小的窗口，类似设置窗口
+    mainWindow = new UIWindow(WINDOW_ID, 30, 20, 180, 95);
     uiManager->addWidget(mainWindow);
     
     // 创建标题
-    titleLabel = new UILabel(TITLE_LABEL_ID, 5, 5, "Music Player");
+    titleLabel = new UILabel(TITLE_LABEL_ID, 35, 25, "Music Player");
     titleLabel->setTextColor(TFT_WHITE);
     uiManager->addWidget(titleLabel);
     
     // 创建歌曲信息标签
-    songLabel = new UILabel(SONG_LABEL_ID, 5, 20, "No song loaded");
+    songLabel = new UILabel(SONG_LABEL_ID, 35, 40, "No song loaded");
     songLabel->setTextColor(TFT_YELLOW);
     uiManager->addWidget(songLabel);
     
-    // 创建播放列表
-    playList = new UIMenuList(PLAYLIST_ID, 5, 35, 230, 45);
+    // 创建播放列表 - 调整大小和位置
+    playList = new UIMenuList(PLAYLIST_ID, 35, 55, 140, 30);
     playList->setColors(TFT_WHITE, TFT_BLUE, TFT_WHITE, TFT_DARKGREY);
     uiManager->addWidget(playList);
     
-    // 创建播放控制按钮
-    playButton = new UIButton(PLAY_BUTTON_ID, 10, 120, 60, 20, "Play", "playButton");
-    playButton->setBorderColor(TFT_GREEN);
-    playButton->setTextColor(TFT_WHITE);
-    uiManager->addWidget(playButton);
-    
-    stopButton = new UIButton(STOP_BUTTON_ID, 80, 120, 60, 20, "Stop", "stopButton");
-    stopButton->setBorderColor(TFT_RED);
-    stopButton->setTextColor(TFT_WHITE);
-    uiManager->addWidget(stopButton);
-    
-    prevButton = new UIButton(PREV_BUTTON_ID, 150, 120, 60, 20, "Prev", "prevButton");
-    prevButton->setBorderColor(TFT_BLUE);
-    prevButton->setTextColor(TFT_WHITE);
-    uiManager->addWidget(prevButton);
-    
-    nextButton = new UIButton(NEXT_BUTTON_ID, 220, 120, 60, 20, "Next", "nextButton");
-    nextButton->setBorderColor(TFT_BLUE);
-    nextButton->setTextColor(TFT_WHITE);
-    uiManager->addWidget(nextButton);
-    
-    // 创建音量滑块
-    volumeSlider = new VolumeSlider(VOLUME_SLIDER_ID, 5, 105, 150, 15, 0, 100, currentVolume, "Volume", this);
+    // 创建音量滑块 - 调整位置
+    volumeSlider = new VolumeSlider(VOLUME_SLIDER_ID, 35, 90, 120, 15, 0, 100, currentVolume, "Volume", this);
     volumeSlider->setColors(TFT_DARKGREY, TFT_WHITE, TFT_YELLOW);
     uiManager->addWidget(volumeSlider);
     
-    // 创建状态标签
-    statusLabel = new UILabel(STATUS_LABEL_ID, 5, 125, "Initializing...");
+    // 创建状态标签 - 调整位置
+    statusLabel = new UILabel(STATUS_LABEL_ID, 35, 105, "Ready");
     statusLabel->setTextColor(TFT_GREEN);
     uiManager->addWidget(statusLabel);
     
@@ -123,24 +102,6 @@ void MusicApp::onKeyEvent(const KeyEvent& event) {
         UIWidget* focusedWidget = uiManager->getCurrentFocusedWidget();
         if (focusedWidget) {
             switch (focusedWidget->getId()) {
-                case PLAY_BUTTON_ID:
-                    if (audioStatus.isPlaying) {
-                        sendAudioCommand(AUDIO_CMD_PAUSE);
-                    } else if (audioStatus.isPaused) {
-                        sendAudioCommand(AUDIO_CMD_PLAY);
-                    } else {
-                        playCurrentSong();
-                    }
-                    break;
-                case STOP_BUTTON_ID:
-                    sendAudioCommand(AUDIO_CMD_STOP);
-                    break;
-                case PREV_BUTTON_ID:
-                    sendAudioCommand(AUDIO_CMD_PREV);
-                    break;
-                case NEXT_BUTTON_ID:
-                    sendAudioCommand(AUDIO_CMD_NEXT);
-                    break;
                 case PLAYLIST_ID:
                     playSelectedSong();
                     break;
@@ -166,6 +127,10 @@ void MusicApp::onKeyEvent(const KeyEvent& event) {
                 if (audioStatus.isPlaying) {
                     sendAudioCommand(AUDIO_CMD_PAUSE);
                 }
+                break;
+                
+            case 's': // S键 - 停止
+                sendAudioCommand(AUDIO_CMD_STOP);
                 break;
                 
             case 'n': // N键 - 下一首
@@ -332,14 +297,6 @@ void MusicApp::updateUIFromAudioStatus() {
     if (!audioStatusMutex) return;
     
     if (xSemaphoreTake(audioStatusMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
-        // 更新按钮状态
-        if (playButton) {
-            if (audioStatus.isPlaying) {
-                playButton->setText("Pause");
-            } else {
-                playButton->setText("Play");
-            }
-        }
         
         // 更新歌曲信息
         if (strlen(audioStatus.currentSongName) > 0) {
