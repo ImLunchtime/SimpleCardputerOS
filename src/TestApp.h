@@ -42,12 +42,14 @@ public:
     void onKeyEvent(const KeyEvent& event) override {
         // 将事件传递给UI管理器处理
         if (uiManager->handleKeyEvent(event)) {
-            drawInterface();
+            // 使用局部刷新避免闪烁
+            uiManager->refreshAppArea();
         }
     }
 
 private:
     void drawInterface() {
-        uiManager->refresh();  // 使用新的refresh方法确保完整刷新
+        // 使用智能刷新，根据是否有前景层选择合适的刷新方式
+        uiManager->smartRefresh();
     }
 };

@@ -356,6 +356,46 @@ public:
         }
     }
     
+    // 应用级局部清屏 - 清除应用窗口区域并重绘
+    void refreshAppArea() {
+        if (hasBackgroundLayer && foregroundWidgetCount > 0) {
+            // 找到前景层的主窗口并清除其区域
+            UIWindow* appWindow = nullptr;
+            for (int i = 0; i < foregroundWidgetCount; i++) {
+                if (foregroundWidgets[i] && foregroundWidgets[i]->getType() == WIDGET_WINDOW) {
+                    appWindow = static_cast<UIWindow*>(foregroundWidgets[i]);
+                    break;
+                }
+            }
+            
+            if (appWindow) {
+                // 清除应用窗口区域
+                appWindow->clearAppArea(display);
+                
+                // 重绘所有前景层控件
+                for (int i = 0; i < foregroundWidgetCount; i++) {
+                    if (foregroundWidgets[i] && foregroundWidgets[i]->isVisible()) {
+                        foregroundWidgets[i]->draw(display);
+                    }
+                }
+            }
+        } else {
+            // 如果没有分层，使用标准刷新
+            refresh();
+        }
+    }
+    
+    // 智能刷新 - 根据是否有前景层选择合适的刷新方式
+    void smartRefresh() {
+        if (hasBackgroundLayer && foregroundWidgetCount > 0) {
+            // 有前景层时使用局部刷新
+            refreshAppArea();
+        } else {
+            // 没有前景层时使用全屏刷新
+            refresh();
+        }
+    }
+    
     // 便利方法
     UILabel* createLabel(int id, int x, int y, const String& text, const String& name = "") {
         UILabel* label = new UILabel(id, x, y, text, name);

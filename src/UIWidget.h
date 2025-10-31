@@ -66,6 +66,23 @@ public:
         draw(display);
     }
     
+    // 应用窗口局部清屏支持
+    virtual void clearAppArea(LGFX_Device* display) {
+        // 对于应用窗口，清除整个应用区域（除启动器外的区域）
+        if (type == WIDGET_WINDOW) {
+            display->fillRect(x, y, width, height, TFT_BLACK);
+        } else {
+            // 对于其他控件，使用标准清屏
+            clearArea(display);
+        }
+    }
+    
+    virtual void drawAppPartial(LGFX_Device* display) {
+        // 应用级局部重绘：先清除应用区域，再绘制
+        clearAppArea(display);
+        draw(display);
+    }
+    
     // 菜单控件需要的二级焦点支持
     virtual bool hasSecondaryFocus() const { return false; }
     virtual bool handleSecondaryKeyEvent(const KeyEvent& event) { return false; }
@@ -296,6 +313,21 @@ public:
         
         // 窗口的局部重绘：先清除整个窗口区域，再重绘
         clearArea(display);
+        draw(display);
+    }
+    
+    void clearAppArea(LGFX_Device* display) override {
+        if (!visible) return;
+        
+        // 应用窗口清屏：清除整个窗口区域
+        display->fillRect(x, y, width, height, TFT_BLACK);
+    }
+    
+    void drawAppPartial(LGFX_Device* display) override {
+        if (!visible) return;
+        
+        // 应用窗口局部重绘：先清除应用区域，再重绘
+        clearAppArea(display);
         draw(display);
     }
     

@@ -154,13 +154,15 @@ void MusicApp::onKeyEvent(const KeyEvent& event) {
     if (event.up || event.down) { // 上下箭头 - 列表导航
         // 将事件传递给UI管理器处理列表导航
         if (uiManager->handleKeyEvent(event)) {
-            drawInterface();
+            // 使用局部刷新避免闪烁
+            uiManager->refreshAppArea();
         }
     }
     
     // 将事件传递给UI管理器处理
     if (uiManager->handleKeyEvent(event)) {
-        drawInterface();
+        // 使用局部刷新避免闪烁
+        uiManager->refreshAppArea();
     }
 }
 
@@ -680,7 +682,8 @@ void MusicApp::cleanup() {
 }
 
 void MusicApp::drawInterface() {
-    uiManager->refresh();
+    // 使用智能刷新，根据是否有前景层选择合适的刷新方式
+    uiManager->smartRefresh();
 }
 
 // 静态回调函数

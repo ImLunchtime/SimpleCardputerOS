@@ -84,13 +84,15 @@ public:
         // 处理Enter键 - 进入目录或显示文件信息
         if (event.enter) {
             handleFileSelection();
-            drawInterface();
+            // 使用局部刷新避免闪烁
+            uiManager->refreshAppArea();
             return;
         }
         
         // 处理其他按键 - 传递给UI管理器
         if (uiManager->handleKeyEvent(event)) {
-            drawInterface();
+            // 使用局部刷新避免闪烁
+            uiManager->refreshAppArea();
         }
     }
     
@@ -205,6 +207,7 @@ private:
     }
     
     void drawInterface() {
-        uiManager->refresh();
+        // 使用智能刷新，根据是否有前景层选择合适的刷新方式
+        uiManager->smartRefresh();
     }
 };
