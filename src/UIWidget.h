@@ -585,6 +585,29 @@ private:
     int scrollOffset;
     int visibleItems;
     
+    // 文字裁剪辅助方法
+    String clipText(const String& text, int maxWidth) {
+        if (text.length() == 0) return text;
+        
+        // 计算可用宽度（减去左右边距和省略号宽度）
+        int availableWidth = maxWidth - 8;  // 左边距4px + 右边距4px
+        int ellipsisWidth = 18;  // "..." 大约18像素宽（6像素/字符 * 3字符）
+        
+        // 如果文本很短，直接返回
+        if (text.length() * 6 <= availableWidth) {
+            return text;
+        }
+        
+        // 计算可以显示的字符数（为省略号留出空间）
+        int maxChars = (availableWidth - ellipsisWidth) / 6;
+        if (maxChars <= 0) {
+            return "...";  // 如果空间太小，只显示省略号
+        }
+        
+        // 裁剪文本并添加省略号
+        return text.substring(0, maxChars) + "...";
+    }
+    
 public:
     UIMenuList(int id, int x, int y, int width, int height, const String& name = "", int _itemHeight = 10)
         : UIMenu(id, WIDGET_MENU_LIST, x, y, width, height, name),
@@ -613,7 +636,7 @@ public:
                 display->fillRect(x + 1, itemY, width - 2, itemHeight, selectedColor);
             }
             
-            // 绘制文本
+            // 绘制文本（使用裁剪后的文本）
             uint16_t color = item->enabled ? textColor : disabledColor;
             if (focused && itemIndex == selectedIndex) {
                 color = TFT_BLACK;  // 选中项使用黑色文字
@@ -622,7 +645,10 @@ public:
             display->setTextColor(color);
             display->setTextSize(1);
             display->setCursor(x + 4, itemY + (itemHeight - 8) / 2);
-            display->print(item->text);
+            
+            // 使用裁剪后的文本
+            String clippedText = clipText(item->text, width - 2);
+            display->print(clippedText);
         }
     }
     
