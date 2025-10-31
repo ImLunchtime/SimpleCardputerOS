@@ -3,6 +3,7 @@
 #include "UIManager.h"
 #include "EventSystem.h"
 #include "AppManager.h"
+#include "img_kiwi.h"
 
 class TestApp : public App {
 private:
@@ -12,12 +13,14 @@ private:
     enum ControlIds {
         STATUS_LABEL_ID = 2,
         INFO_LABEL_ID = 3,
+        KIWI_IMAGE_ID = 4,
         WINDOW_ID = 5
     };
     
     // 控件引用
     UILabel* statusLabel;
     UILabel* infoLabel;
+    UIImage* kiwiImage;
     UIWindow* mainWindow;
     
 public:
@@ -28,11 +31,14 @@ public:
         // 创建主窗口 - 更小的窗口位于指定位置
         mainWindow = uiManager->createWindow(WINDOW_ID, 30, 20, 150, 100, "Test", "MainWindow");
         
+        // 创建kiwi图片 - 显示在窗口内 (16x16像素)
+        kiwiImage = uiManager->createImage(KIWI_IMAGE_ID, 50, 40, 16, 16, kiwi_png, kiwi_png_size, "KiwiImage");
+        
         // 创建状态标签
-        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 35, 35, "Test app ready", "Status");
+        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 35, 70, "Test app ready", "Status");
         
         // 创建信息标签
-        infoLabel = uiManager->createLabel(INFO_LABEL_ID, 35, 50, "Press ESC to exit", "Info");
+        infoLabel = uiManager->createLabel(INFO_LABEL_ID, 35, 85, "Press ESC to exit", "Info");
     }
 
     void loop() override {

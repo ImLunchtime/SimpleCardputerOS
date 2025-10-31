@@ -433,6 +433,12 @@ public:
         return menu;
     }
     
+    UIImage* createImage(int id, int x, int y, int width, int height, const uint8_t* imageData, size_t dataSize, const String& name = "") {
+        UIImage* image = new UIImage(id, x, y, width, height, imageData, dataSize, name);
+        addWidget(image);
+        return image;
+    }
+    
 private:
     void removeFocusableWidget(int widgetIndex) {
         // 从可聚焦列表中移除
