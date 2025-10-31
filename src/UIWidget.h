@@ -554,7 +554,7 @@ private:
     int visibleItems;
     
 public:
-    UIMenuList(int id, int x, int y, int width, int height, const String& name = "", int _itemHeight = 16)
+    UIMenuList(int id, int x, int y, int width, int height, const String& name = "", int _itemHeight = 10)
         : UIMenu(id, WIDGET_MENU_LIST, x, y, width, height, name),
           itemHeight(_itemHeight), scrollOffset(0) {
         visibleItems = (height - 4) / itemHeight;  // 减去边框的高度
@@ -566,7 +566,7 @@ public:
         drawMenuBorder(display);
         
         // 绘制菜单项
-        int startY = y + 2;
+        int startY = y + 1;
         int drawCount = min(visibleItems, itemCount - scrollOffset);
         
         for (int i = 0; i < drawCount; i++) {

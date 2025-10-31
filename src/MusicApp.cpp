@@ -54,17 +54,17 @@ void MusicApp::setup() {
     uiManager->addWidget(titleLabel);
     
     // 创建歌曲信息标签
-    songLabel = new UILabel(SONG_LABEL_ID, 35, 40, "No song loaded");
+    songLabel = new UILabel(SONG_LABEL_ID, 35, 35, "No song loaded");
     songLabel->setTextColor(TFT_YELLOW);
     uiManager->addWidget(songLabel);
     
     // 创建播放列表 - 调整大小和位置
-    playList = new UIMenuList(PLAYLIST_ID, 35, 55, 140, 30);
+    playList = new UIMenuList(PLAYLIST_ID, 35, 50, 160, 35);
     playList->setColors(TFT_WHITE, TFT_BLUE, TFT_WHITE, TFT_DARKGREY);
     uiManager->addWidget(playList);
     
     // 创建音量滑块 - 调整位置
-    volumeSlider = new VolumeSlider(VOLUME_SLIDER_ID, 35, 90, 120, 15, 0, 100, currentVolume, "Volume", this);
+    volumeSlider = new VolumeSlider(VOLUME_SLIDER_ID, 35, 90, 120, 15, 0, 100, currentVolume, " ", this);
     volumeSlider->setColors(TFT_DARKGREY, TFT_WHITE, TFT_YELLOW);
     uiManager->addWidget(volumeSlider);
     
