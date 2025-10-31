@@ -1,5 +1,6 @@
 #pragma once
 #include <M5Cardputer.h>
+#include <SD.h>
 #include "EventSystem.h"
 
 // UI控件类型枚举
@@ -10,7 +11,9 @@ enum UIWidgetType {
     WIDGET_WINDOW,
     WIDGET_MENU_LIST,
     WIDGET_MENU_GRID,
-    WIDGET_SLIDER
+    WIDGET_SLIDER,
+    WIDGET_IMAGE,
+    WIDGET_IMAGE_BUTTON
 };
 
 // UI控件基类
@@ -808,5 +811,137 @@ private:
             selectedRow = selectedIndex / columns;
             selectedCol = selectedIndex % columns;
         }
+    }
+};
+
+// UIImage类 - 用于显示PNG图片
+class UIImage : public UIWidget {
+private:
+    const uint8_t* imageData;    // 图片数据指针
+    size_t imageDataSize;        // 图片数据大小
+    String filePath;             // SD卡文件路径
+    bool useFile;                // 是否使用文件模式
+    float scaleX, scaleY;        // 缩放比例
+    bool maintainAspectRatio;    // 是否保持宽高比
+    
+public:
+    // 构造函数 - 从数组加载
+    UIImage(int id, int x, int y, int width, int height, const uint8_t* data, size_t dataSize, const String& name = "")
+        : UIWidget(id, WIDGET_IMAGE, x, y, width, height, name, false),
+          imageData(data), imageDataSize(dataSize), useFile(false),
+          scaleX(1.0f), scaleY(1.0f), maintainAspectRatio(true) {
+    }
+    
+    // 构造函数 - 从SD卡文件加载
+    UIImage(int id, int x, int y, int width, int height, const String& file, const String& name = "")
+        : UIWidget(id, WIDGET_IMAGE, x, y, width, height, name, false),
+          imageData(nullptr), imageDataSize(0), filePath(file), useFile(true),
+          scaleX(1.0f), scaleY(1.0f), maintainAspectRatio(true) {
+    }
+    
+    void setImageData(const uint8_t* data, size_t dataSize) {
+        imageData = data;
+        imageDataSize = dataSize;
+        useFile = false;
+    }
+    
+    void setImageFile(const String& file) {
+        filePath = file;
+        useFile = true;
+    }
+    
+    void setScale(float x, float y) {
+        scaleX = x;
+        scaleY = y;
+    }
+    
+    void setMaintainAspectRatio(bool maintain) {
+        maintainAspectRatio = maintain;
+    }
+    
+    void draw(LGFX_Device* display) override {
+        if (!visible) return;
+        
+        if (useFile && filePath.length() > 0) {
+            // 从SD卡文件绘制 - 使用简化的方法
+            display->drawPngFile(filePath.c_str(), x, y);
+        } else if (imageData && imageDataSize > 0) {
+            // 从数组绘制
+            display->drawPng(imageData, imageDataSize, x, y, width, height, 0, 0,
+                           maintainAspectRatio ? 0 : scaleX,
+                           maintainAspectRatio ? 0 : scaleY);
+        }
+    }
+    
+    bool handleKeyEvent(const KeyEvent& event) override {
+        // 图片不处理键盘事件
+        return false;
+    }
+};
+
+// UIImageButton类 - 可点击的图片按钮
+class UIImageButton : public UIImage {
+private:
+    uint16_t borderColor;
+    uint16_t focusColor;
+    bool showBorder;
+    
+public:
+    // 构造函数 - 从数组加载
+    UIImageButton(int id, int x, int y, int width, int height, const uint8_t* data, size_t dataSize, const String& name = "")
+        : UIImage(id, x, y, width, height, data, dataSize, name),
+          borderColor(TFT_WHITE), focusColor(TFT_YELLOW), showBorder(true) {
+        type = WIDGET_IMAGE_BUTTON;
+        focusable = true;
+    }
+    
+    // 构造函数 - 从SD卡文件加载
+    UIImageButton(int id, int x, int y, int width, int height, const String& file, const String& name = "")
+        : UIImage(id, x, y, width, height, file, name),
+          borderColor(TFT_WHITE), focusColor(TFT_YELLOW), showBorder(true) {
+        type = WIDGET_IMAGE_BUTTON;
+        focusable = true;
+    }
+    
+    void setColors(uint16_t border, uint16_t focus) {
+        borderColor = border;
+        focusColor = focus;
+    }
+    
+    void setShowBorder(bool show) {
+        showBorder = show;
+    }
+    
+    void draw(LGFX_Device* display) override {
+        if (!visible) return;
+        
+        // 绘制图片
+        UIImage::draw(display);
+        
+        // 绘制边框
+        if (showBorder) {
+            uint16_t color = focused ? focusColor : borderColor;
+            display->drawRect(x, y, width, height, color);
+            if (focused) {
+                // 焦点时绘制双重边框
+                display->drawRect(x + 1, y + 1, width - 2, height - 2, color);
+            }
+        }
+    }
+    
+    bool handleKeyEvent(const KeyEvent& event) override {
+        if (!focused || !visible) return false;
+        
+        // 处理回车键
+        if (event.enter) {
+            onButtonClick();
+            return true;
+        }
+        
+        return false;
+    }
+    
+    virtual void onButtonClick() {
+        // 子类可以重写此方法来处理点击事件
     }
 };
