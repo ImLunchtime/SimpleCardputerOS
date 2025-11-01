@@ -4,7 +4,7 @@
 #include "EventSystem.h"
 #include "AppManager.h"
 #include "ThemeManager.h"
-#include "DefaultTheme.h"
+#include "PrototypeTheme.h"
 #include "DarkTheme.h"
 
 class ThemeApp : public App {
@@ -44,26 +44,20 @@ public:
         : eventSystem(events) {}
 
     void setup() override {
-        // 初始化主题系统并注册主题
-        if (globalThemeManager) {
-            globalThemeManager->registerTheme(new DefaultTheme());
-            globalThemeManager->registerTheme(new DarkTheme());
-        }
-        
-        // 创建主窗口
-        mainWindow = new UIWindow(1, 0, 0, 320, 240, "Theme Settings");
+        // 创建主窗口 - 更小的窗口位于指定位置，参考设置App的布局
+        mainWindow = new UIWindow(1, 30, 20, 180, 100, "Theme Settings");
         uiManager->addWidget(mainWindow);
         
         // 创建状态标签
-        statusLabel = new UILabel(2, 10, 30, "Theme Manager");
+        statusLabel = new UILabel(2, 35, 35, "Theme Manager");
         uiManager->addWidget(statusLabel);
         
-        // 创建预览标签
-        previewLabel = new UILabel(3, 10, 60, "Current: Default");
+        // 创建当前主题预览标签
+        previewLabel = new UILabel(3, 35, 45, "Current: Default");
         uiManager->addWidget(previewLabel);
         
-        // 创建主题菜单
-        themeMenu = new ThemeMenuList(4, 10, 90, 300, 120, "ThemeMenu", 15, this);
+        // 创建主题菜单 - 更紧凑的尺寸
+        themeMenu = new ThemeMenuList(4, 35, 55, 150, 50, "ThemeMenu", 12, this);
         
         // 添加主题选项
         if (globalThemeManager) {
@@ -74,6 +68,9 @@ public:
                 }
             }
         }
+        
+        // 设置菜单颜色 - 使用与设置App相似的配色
+        themeMenu->setColors(TFT_BLUE, TFT_CYAN, TFT_WHITE, TFT_DARKGREY);
         
         uiManager->addWidget(themeMenu);
         

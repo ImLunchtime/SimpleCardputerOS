@@ -8,6 +8,9 @@
 #include "FileManagerApp.h"
 #include "ThemeApp.h"
 #include "ThemeManager.h"
+#include "PrototypeTheme.h"
+#include "DarkTheme.h"
+#include "Windows98Theme.h"
 
 // 全局对象
 EventSystem globalEventSystem;
@@ -31,6 +34,15 @@ void setup() {
   // 设置显示器
   M5Cardputer.Display.setRotation(1);
   M5Cardputer.Display.setTextSize(1);
+  
+  // 初始化主题系统并设置默认主题
+  if (globalThemeManager) {
+    globalThemeManager->registerTheme(new PrototypeTheme());
+    globalThemeManager->registerTheme(new DarkTheme());
+    globalThemeManager->registerTheme(new Windows98Theme());
+    // 设置Dark主题为默认主题
+    globalThemeManager->setCurrentTheme(1);
+  }
   
   // 注册应用到应用管理器
   globalAppManager.registerApp("launcher", "Launcher", &launcherApp, true);  // 启动器

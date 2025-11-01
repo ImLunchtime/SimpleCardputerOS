@@ -1,8 +1,8 @@
 #pragma once
 #include "ThemeManager.h"
 
-// 默认主题实现
-class DefaultTheme : public Theme {
+// 原型主题实现
+class PrototypeTheme : public Theme {
 public:
     void drawLabel(const ThemeDrawParams& params) override {
         if (!params.visible || !params.display) return;
@@ -147,13 +147,13 @@ public:
     }
     
     String getThemeName() const override {
-        return "Default";
+        return "Prototype";
     }
     
     String getThemeDescription() const override {
-        return "Default system theme with classic appearance";
+        return "Prototype system theme with classic appearance";
     }
 };
 
-// 全局默认主题实例
-extern DefaultTheme defaultTheme;
+// 全局原型主题实例
+extern PrototypeTheme prototypeTheme;
