@@ -12,6 +12,12 @@ MusicApp::MusicApp(EventSystem* events, AppManager* manager)
     memset(&audioStatus, 0, sizeof(audioStatus));
     audioStatus.currentVolume = currentVolume;
     audioStatus.currentFileIndex = -1;
+    
+    // 初始化菜单状态
+    menuState.level = MENU_MAIN;
+    menuState.currentArtist = "";
+    menuState.currentAlbum = "";
+    menuState.selectedIndex = 0;
 }
 
 MusicApp::~MusicApp() {
@@ -34,6 +40,9 @@ MusicApp::~MusicApp() {
         audioStatusMutex = nullptr;
     }
     
+    // 清理音乐分类数据
+    clearMusicData();
+    
     cleanup();
 }
 
@@ -44,32 +53,36 @@ void MusicApp::setup() {
     spk_cfg.task_pinned_core = APP_CPU_NUM;
     M5Cardputer.Speaker.config(spk_cfg);
     
-    // 创建主窗口 - 更小的窗口，类似设置窗口
-    mainWindow = new UIWindow(WINDOW_ID, 30, 20, 180, 95);
+    // 创建主窗口 - 扩大窗口尺寸以容纳底部UI
+    mainWindow = new UIWindow(WINDOW_ID, 20, 15, 200, 130);
     uiManager->addWidget(mainWindow);
     
     // 创建标题
-    titleLabel = new UILabel(TITLE_LABEL_ID, 35, 25, "Music Player");
+    titleLabel = new UILabel(TITLE_LABEL_ID, 25, 20, "Music Player");
     titleLabel->setTextColor(TFT_WHITE);
     uiManager->addWidget(titleLabel);
     
     // 创建歌曲信息标签
-    songLabel = new UILabel(SONG_LABEL_ID, 35, 35, "No song loaded");
+    songLabel = new UILabel(SONG_LABEL_ID, 25, 30, "No song loaded");
     songLabel->setTextColor(TFT_YELLOW);
     uiManager->addWidget(songLabel);
     
-    // 创建播放列表 - 调整大小和位置
-    playList = new UIMenuList(PLAYLIST_ID, 35, 50, 160, 35);
+    // 创建播放列表 - 调整高度为底部UI留出空间
+    playList = new MusicMenuList(PLAYLIST_ID, 25, 45, 190, 50, "playlist", 10, this);
     playList->setColors(TFT_WHITE, TFT_BLUE, TFT_WHITE, TFT_DARKGREY);
     uiManager->addWidget(playList);
     
-    // 创建音量滑块 - 调整位置
-    volumeSlider = new VolumeSlider(VOLUME_SLIDER_ID, 35, 90, 120, 15, 0, 100, currentVolume, " ", this);
-    volumeSlider->setColors(TFT_DARKGREY, TFT_WHITE, TFT_YELLOW);
+    // 创建当前播放曲名标签 - 位于底部
+    nowPlayingLabel = new UILabel(NOW_PLAYING_LABEL_ID, 25, 100, "♪ Not Playing");
+    nowPlayingLabel->setTextColor(TFT_CYAN);
+    uiManager->addWidget(nowPlayingLabel);
+    
+    // 创建音量滑块 - 位于底部
+    volumeSlider = new VolumeSlider(VOLUME_SLIDER_ID, 25, 115, 120, 12, "volume");
     uiManager->addWidget(volumeSlider);
     
-    // 创建状态标签 - 调整位置
-    statusLabel = new UILabel(STATUS_LABEL_ID, 35, 105, "Ready");
+    // 创建状态标签 - 调整位置到右下角
+    statusLabel = new UILabel(STATUS_LABEL_ID, 150, 115, "Ready");
     statusLabel->setTextColor(TFT_GREEN);
     uiManager->addWidget(statusLabel);
     
@@ -79,8 +92,11 @@ void MusicApp::setup() {
     // 初始化双核心音频系统
     initializeDualCoreAudio();
     
-    // 扫描音乐文件
+    // 扫描音乐文件并分类
     scanMusicFiles();
+    
+    // 构建主菜单
+    buildMainMenu();
     
     drawInterface();
 }
@@ -97,19 +113,13 @@ void MusicApp::loop() {
 }
 
 void MusicApp::onKeyEvent(const KeyEvent& event) {
-    // 处理按钮点击
-    if (event.enter) {
-        UIWidget* focusedWidget = uiManager->getCurrentFocusedWidget();
-        if (focusedWidget) {
-            switch (focusedWidget->getId()) {
-                case PLAYLIST_ID:
-                    playSelectedSong();
-                    break;
-            }
-        }
+    // 处理Esc键 - 返回上一级菜单
+    if (event.esc) {
+        navigateBack();
+        return;
     }
     
-    // 处理文本输入（保留一些快捷键）
+    // 只保留基本的播放控制快捷键，其他按键交给UI系统处理
     if (!event.text.isEmpty()) {
         char key = event.text.charAt(0);
         switch (key) {
@@ -121,47 +131,19 @@ void MusicApp::onKeyEvent(const KeyEvent& event) {
                 } else {
                     playCurrentSong();
                 }
-                break;
-                
-            case 'p': // P键 - 暂停
-                if (audioStatus.isPlaying) {
-                    sendAudioCommand(AUDIO_CMD_PAUSE);
-                }
-                break;
-                
-            case 's': // S键 - 停止
-                sendAudioCommand(AUDIO_CMD_STOP);
-                break;
-                
-            case 'n': // N键 - 下一首
-                sendAudioCommand(AUDIO_CMD_NEXT);
-                break;
-                
-            case 'b': // B键 - 上一首
-                sendAudioCommand(AUDIO_CMD_PREV);
-                break;
-                
-            case ';': // 分号 - 音量+ (也是up键)
-                adjustVolume(10);
-                break;
-                
-            case '.': // 句号 - 音量- (也是down键)
-                adjustVolume(-10);
-                break;
+                return; // 处理完毕，直接返回
         }
     }
     
-    if (event.up || event.down) { // 上下箭头 - 列表导航
-        // 将事件传递给UI管理器处理列表导航
-        if (uiManager->handleKeyEvent(event)) {
-            // 使用局部刷新避免闪烁
-            uiManager->refreshAppArea();
-        }
+    // 左右箭头键控制音量
+    if (event.left || event.right) {
+        int volumeDelta = event.right ? 5 : -5;
+        adjustVolume(volumeDelta);
+        return; // 处理完毕，直接返回
     }
     
-    // 将事件传递给UI管理器处理
+    // 将其他所有按键事件（包括上下键、Enter等）交给UI管理器统一处理
     if (uiManager->handleKeyEvent(event)) {
-        // 使用局部刷新避免闪烁
         uiManager->refreshAppArea();
     }
 }
@@ -305,6 +287,25 @@ void MusicApp::updateUIFromAudioStatus() {
             String info = "(" + String(audioStatus.currentFileIndex + 1) + "/" + String(musicFileCount) + ") ";
             info += String(audioStatus.currentSongName);
             songLabel->setText(info);
+        }
+        
+        // 更新当前播放曲名显示
+        if (nowPlayingLabel) {
+            if (audioStatus.isPlaying && strlen(audioStatus.currentSongName) > 0) {
+                String nowPlaying = "♪ " + String(audioStatus.currentSongName);
+                // 如果曲名太长，截断显示
+                if (nowPlaying.length() > 25) {
+                    nowPlaying = nowPlaying.substring(0, 22) + "...";
+                }
+                nowPlayingLabel->setText(nowPlaying);
+                nowPlayingLabel->setTextColor(TFT_CYAN);
+            } else if (audioStatus.isPaused) {
+                nowPlayingLabel->setText("⏸ Paused");
+                nowPlayingLabel->setTextColor(TFT_ORANGE);
+            } else {
+                nowPlayingLabel->setText("♪ Not Playing");
+                nowPlayingLabel->setTextColor(TFT_DARKGREY);
+            }
         }
         
         // 更新状态信息
@@ -607,22 +608,20 @@ void MusicApp::scanMusicFiles() {
     statusLabel->setText("Scanning for music files...");
     drawInterface();
     
+    // 清理之前的数据
+    clearMusicData();
+    
     // 扫描所有MP3文件
     musicFileCount = 0;
     fileManager.scanAllFiles(musicFiles, musicFileCount, MAX_MUSIC_FILES, ".mp3");
     
-    // 更新播放列表
-    playList->clear();
-    for (int i = 0; i < musicFileCount; i++) {
-        String displayName = musicFiles[i].name;
-        // 移除.mp3扩展名
-        if (displayName.endsWith(".mp3")) {
-            displayName = displayName.substring(0, displayName.length() - 4);
-        }
-        playList->addItem("♪ " + displayName, i, "");
-    }
-    
     if (musicFileCount > 0) {
+        statusLabel->setText("Categorizing music files...");
+        drawInterface();
+        
+        // 分类音乐文件
+        categorizeMusic();
+        
         statusLabel->setText("Found " + String(musicFileCount) + " music files");
         currentFileIndex = 0;
         updateSongInfo();
@@ -643,9 +642,49 @@ void MusicApp::playCurrentSong() {
 
 void MusicApp::playSelectedSong() {
     MenuItem* selectedItem = playList->getSelectedItem();
-    if (selectedItem && selectedItem->id >= 0 && selectedItem->id < musicFileCount) {
-        currentFileIndex = selectedItem->id;
-        playCurrentSong();
+    if (!selectedItem) return;
+    
+    if (menuState.level == MENU_TRACKS) {
+        // 在曲目列表中，播放选中的曲目
+        std::vector<MusicTrack*> tracksToPlay;
+        
+        if (menuState.currentArtist.isEmpty() && menuState.currentAlbum.isEmpty()) {
+            // 未分类曲目
+            tracksToPlay = uncategorizedTracks;
+        } else if (!menuState.currentArtist.isEmpty() && menuState.currentAlbum.isEmpty()) {
+            // 艺术家的所有曲目
+            Artist* artist = findOrCreateArtist(menuState.currentArtist);
+            for (Album* album : artist->albums) {
+                for (MusicTrack* track : album->tracks) {
+                    tracksToPlay.push_back(track);
+                }
+            }
+            for (MusicTrack* track : artist->singleTracks) {
+                tracksToPlay.push_back(track);
+            }
+        } else {
+            // 特定专辑的曲目
+            Artist* artist = findOrCreateArtist(menuState.currentArtist);
+            for (Album* album : artist->albums) {
+                if (album->name.equalsIgnoreCase(menuState.currentAlbum)) {
+                    tracksToPlay = album->tracks;
+                    break;
+                }
+            }
+        }
+        
+        if (selectedItem->id >= 0 && selectedItem->id < (int)tracksToPlay.size()) {
+            MusicTrack* track = tracksToPlay[selectedItem->id];
+            
+            // 找到对应的文件索引
+            for (int i = 0; i < musicFileCount; i++) {
+                if (String(musicFiles[i].path) == track->filePath) {
+                    currentFileIndex = i;
+                    playCurrentSong();
+                    return;
+                }
+            }
+        }
     }
 }
 
@@ -654,13 +693,26 @@ void MusicApp::adjustVolume(int delta) {
     if (currentVolume < 0) currentVolume = 0;
     if (currentVolume > 100) currentVolume = 100;
     
+    // 更新音量滑块显示
+    if (volumeSlider) {
+        volumeSlider->setValue(currentVolume);
+    }
+    
     sendAudioCommand(AUDIO_CMD_VOLUME, currentVolume);
+    
+    // 刷新UI显示
+    uiManager->refreshAppArea();
 }
 
 void MusicApp::setVolume(int volume) {
     currentVolume = volume;
     if (currentVolume < 0) currentVolume = 0;
     if (currentVolume > 100) currentVolume = 100;
+    
+    // 更新音量滑块显示
+    if (volumeSlider) {
+        volumeSlider->setValue(currentVolume);
+    }
     
     sendAudioCommand(AUDIO_CMD_VOLUME, currentVolume);
 }
@@ -690,4 +742,393 @@ void MusicApp::drawInterface() {
 void MusicApp::metadataCallback(void *cbData, const char *type, bool isUnicode, const char *string) {
     // 可以在这里处理ID3标签信息
     // 暂时不做处理，避免复杂化
+}
+
+// 音乐分类和菜单导航方法实现
+void MusicApp::categorizeMusic() {
+    // 解析所有音乐文件
+    for (int i = 0; i < musicFileCount; i++) {
+        MusicTrack* track = parseFileName(musicFiles[i].name, musicFiles[i].path);
+        if (track) {
+            allTracks.push_back(track);
+            
+            if (track->artist.isEmpty() || track->album.isEmpty()) {
+                // 无法分类的文件
+                uncategorizedTracks.push_back(track);
+            } else {
+                // 找到或创建艺术家
+                Artist* artist = findOrCreateArtist(track->artist);
+                
+                // 找到或创建专辑
+                Album* album = findOrCreateAlbum(artist, track->album);
+                
+                // 添加曲目到专辑
+                album->tracks.push_back(track);
+            }
+        }
+    }
+}
+
+MusicTrack* MusicApp::parseFileName(const String& fileName, const String& filePath) {
+    MusicTrack* track = new MusicTrack();
+    track->fileName = fileName;
+    track->filePath = filePath;
+    
+    // 移除.mp3扩展名
+    String nameWithoutExt = fileName;
+    if (nameWithoutExt.endsWith(".mp3")) {
+        nameWithoutExt = nameWithoutExt.substring(0, nameWithoutExt.length() - 4);
+    }
+    
+    // 尝试解析 "艺术家-专辑-曲名" 格式
+    int firstDash = nameWithoutExt.indexOf('-');
+    if (firstDash > 0) {
+        int secondDash = nameWithoutExt.indexOf('-', firstDash + 1);
+        if (secondDash > firstDash + 1) {
+            // 找到两个破折号，按格式解析
+            track->artist = nameWithoutExt.substring(0, firstDash);
+            track->album = nameWithoutExt.substring(firstDash + 1, secondDash);
+            track->title = nameWithoutExt.substring(secondDash + 1);
+            
+            // 去除前后空格
+            track->artist.trim();
+            track->album.trim();
+            track->title.trim();
+        } else {
+            // 只有一个破折号，可能是 "艺术家-曲名" 格式
+            track->artist = nameWithoutExt.substring(0, firstDash);
+            track->title = nameWithoutExt.substring(firstDash + 1);
+            track->artist.trim();
+            track->title.trim();
+            track->album = ""; // 没有专辑信息
+        }
+    } else {
+        // 没有破折号，整个文件名作为曲名
+        track->title = nameWithoutExt;
+        track->artist = "";
+        track->album = "";
+    }
+    
+    return track;
+}
+
+Artist* MusicApp::findOrCreateArtist(const String& artistName) {
+    // 查找现有艺术家
+    for (Artist* artist : artists) {
+        if (artist->name.equalsIgnoreCase(artistName)) {
+            return artist;
+        }
+    }
+    
+    // 创建新艺术家
+    Artist* newArtist = new Artist();
+    newArtist->name = artistName;
+    artists.push_back(newArtist);
+    return newArtist;
+}
+
+Album* MusicApp::findOrCreateAlbum(Artist* artist, const String& albumName) {
+    // 在艺术家的专辑中查找
+    for (Album* album : artist->albums) {
+        if (album->name.equalsIgnoreCase(albumName)) {
+            return album;
+        }
+    }
+    
+    // 创建新专辑
+    Album* newAlbum = new Album();
+    newAlbum->name = albumName;
+    newAlbum->artist = artist->name;
+    artist->albums.push_back(newAlbum);
+    allAlbums.push_back(newAlbum);
+    return newAlbum;
+}
+
+void MusicApp::clearMusicData() {
+    // 清理所有动态分配的内存
+    for (MusicTrack* track : allTracks) {
+        delete track;
+    }
+    allTracks.clear();
+    uncategorizedTracks.clear();
+    
+    for (Album* album : allAlbums) {
+        delete album;
+    }
+    allAlbums.clear();
+    
+    for (Artist* artist : artists) {
+        delete artist;
+    }
+    artists.clear();
+}
+
+void MusicApp::buildMainMenu() {
+    playList->clear();
+    menuState.level = MENU_MAIN;
+    menuState.currentArtist = "";
+    menuState.currentAlbum = "";
+    
+    // 添加主菜单项
+    playList->addItem("📁 Albums (" + String(allAlbums.size()) + ")", 0, "");
+    playList->addItem("🎤 Artists (" + String(artists.size()) + ")", 1, "");
+    playList->addItem("📄 Uncategorized (" + String(uncategorizedTracks.size()) + ")", 2, "");
+    
+    titleLabel->setText("Music Library");
+    songLabel->setText("Select a category");
+}
+
+void MusicApp::buildArtistsMenu() {
+    playList->clear();
+    menuState.level = MENU_ARTISTS;
+    
+    // 添加返回选项
+    playList->addItem("📁 ../", -1, "");
+    
+    for (size_t i = 0; i < artists.size(); i++) {
+        Artist* artist = artists[i];
+        int totalTracks = 0;
+        for (Album* album : artist->albums) {
+            totalTracks += album->tracks.size();
+        }
+        totalTracks += artist->singleTracks.size();
+        
+        playList->addItem("🎤 " + artist->name + " (" + String(totalTracks) + ")", i, "");
+    }
+    
+    titleLabel->setText("Artists");
+    songLabel->setText("Select an artist");
+}
+
+void MusicApp::buildAlbumsMenu(const String& artistName) {
+    playList->clear();
+    menuState.level = MENU_ALBUMS;
+    menuState.currentArtist = artistName;
+    
+    // 添加返回选项
+    playList->addItem("📁 ../", -1, "");
+    
+    if (artistName.isEmpty()) {
+        // 显示所有专辑
+        for (size_t i = 0; i < allAlbums.size(); i++) {
+            Album* album = allAlbums[i];
+            playList->addItem("💿 " + album->name + " - " + album->artist + " (" + String(album->tracks.size()) + ")", i, "");
+        }
+        titleLabel->setText("All Albums");
+    } else {
+        // 显示特定艺术家的专辑
+        Artist* artist = findOrCreateArtist(artistName);
+        int index = 0;
+        for (Album* album : artist->albums) {
+            playList->addItem("💿 " + album->name + " (" + String(album->tracks.size()) + ")", index++, "");
+        }
+        titleLabel->setText(artistName + " - Albums");
+    }
+    
+    songLabel->setText("Select an album");
+}
+
+void MusicApp::buildTracksMenu(const String& artistName, const String& albumName) {
+    playList->clear();
+    menuState.level = MENU_TRACKS;
+    menuState.currentArtist = artistName;
+    menuState.currentAlbum = albumName;
+    
+    // 添加返回选项
+    playList->addItem("📁 ../", -1, "");
+    
+    std::vector<MusicTrack*> tracksToShow;
+    
+    if (artistName.isEmpty() && albumName.isEmpty()) {
+        // 显示未分类的曲目
+        tracksToShow = uncategorizedTracks;
+        titleLabel->setText("Uncategorized");
+    } else if (!artistName.isEmpty() && albumName.isEmpty()) {
+        // 显示艺术家的所有曲目
+        Artist* artist = findOrCreateArtist(artistName);
+        for (Album* album : artist->albums) {
+            for (MusicTrack* track : album->tracks) {
+                tracksToShow.push_back(track);
+            }
+        }
+        for (MusicTrack* track : artist->singleTracks) {
+            tracksToShow.push_back(track);
+        }
+        titleLabel->setText(artistName + " - All Tracks");
+    } else {
+        // 显示特定专辑的曲目
+        Artist* artist = findOrCreateArtist(artistName);
+        for (Album* album : artist->albums) {
+            if (album->name.equalsIgnoreCase(albumName)) {
+                tracksToShow = album->tracks;
+                break;
+            }
+        }
+        titleLabel->setText(albumName);
+    }
+    
+    // 添加曲目到列表
+    for (size_t i = 0; i < tracksToShow.size(); i++) {
+        MusicTrack* track = tracksToShow[i];
+        String displayName = "♪ " + track->title;
+        if (!track->artist.isEmpty() && artistName.isEmpty()) {
+            displayName += " - " + track->artist;
+        }
+        playList->addItem(displayName, i, "");
+    }
+    
+    songLabel->setText("Select a track to play");
+}
+
+void MusicApp::navigateBack() {
+    switch (menuState.level) {
+        case MENU_MAIN:
+            // 已经在主菜单，无法返回
+            break;
+            
+        case MENU_ARTISTS:
+        case MENU_ALBUMS:
+            buildMainMenu();
+            break;
+            
+        case MENU_TRACKS:
+            if (!menuState.currentArtist.isEmpty() && !menuState.currentAlbum.isEmpty()) {
+                // 从专辑曲目返回到专辑列表
+                buildAlbumsMenu(menuState.currentArtist);
+            } else if (!menuState.currentArtist.isEmpty()) {
+                // 从艺术家曲目返回到艺术家列表
+                buildArtistsMenu();
+            } else {
+                // 从未分类曲目返回到主菜单
+                buildMainMenu();
+            }
+            break;
+    }
+    
+    updateMenuDisplay();
+}
+
+void MusicApp::navigateForward() {
+    MenuItem* selectedItem = playList->getSelectedItem();
+    if (!selectedItem) return;
+    
+    switch (menuState.level) {
+        case MENU_MAIN:
+            switch (selectedItem->id) {
+                case 0: // Albums
+                    buildAlbumsMenu();
+                    break;
+                case 1: // Artists
+                    buildArtistsMenu();
+                    break;
+                case 2: // Uncategorized
+                    buildTracksMenu();
+                    break;
+            }
+            break;
+            
+        case MENU_ARTISTS:
+            if (selectedItem->id >= 0 && selectedItem->id < (int)artists.size()) {
+                Artist* artist = artists[selectedItem->id];
+                if (artist->albums.size() > 1) {
+                    // 艺术家有多个专辑，显示专辑列表
+                    buildAlbumsMenu(artist->name);
+                } else {
+                    // 艺术家只有一个专辑或只有单曲，直接显示曲目
+                    buildTracksMenu(artist->name);
+                }
+            }
+            break;
+            
+        case MENU_ALBUMS:
+            if (!menuState.currentArtist.isEmpty()) {
+                // 在艺术家的专辑列表中
+                Artist* artist = findOrCreateArtist(menuState.currentArtist);
+                if (selectedItem->id >= 0 && selectedItem->id < (int)artist->albums.size()) {
+                    Album* album = artist->albums[selectedItem->id];
+                    buildTracksMenu(artist->name, album->name);
+                }
+            } else {
+                // 在所有专辑列表中
+                if (selectedItem->id >= 0 && selectedItem->id < (int)allAlbums.size()) {
+                    Album* album = allAlbums[selectedItem->id];
+                    buildTracksMenu(album->artist, album->name);
+                }
+            }
+            break;
+            
+        case MENU_TRACKS:
+            // 播放选中的曲目
+            playSelectedSong();
+            break;
+    }
+    
+    updateMenuDisplay();
+}
+
+void MusicApp::updateMenuDisplay() {
+    uiManager->refreshAppArea();
+}
+
+void MusicApp::handleMenuSelection(MenuItem* item) {
+    if (!item) return;
+    
+    // 处理返回选项（ID为-1）
+    if (item->id == -1) {
+        navigateBack();
+        return;
+    }
+    
+    switch (menuState.level) {
+        case MENU_MAIN:
+            switch (item->id) {
+                case 0: // Albums
+                    buildAlbumsMenu();
+                    break;
+                case 1: // Artists
+                    buildArtistsMenu();
+                    break;
+                case 2: // Uncategorized
+                    buildTracksMenu();
+                    break;
+            }
+            break;
+            
+        case MENU_ARTISTS:
+            if (item->id >= 0 && item->id < (int)artists.size()) {
+                Artist* artist = artists[item->id];
+                if (artist->albums.size() > 1) {
+                    // 艺术家有多个专辑，显示专辑列表
+                    buildAlbumsMenu(artist->name);
+                } else {
+                    // 艺术家只有一个专辑或只有单曲，直接显示曲目
+                    buildTracksMenu(artist->name);
+                }
+            }
+            break;
+            
+        case MENU_ALBUMS:
+            if (!menuState.currentArtist.isEmpty()) {
+                // 在艺术家的专辑列表中
+                Artist* artist = findOrCreateArtist(menuState.currentArtist);
+                if (item->id >= 0 && item->id < (int)artist->albums.size()) {
+                    Album* album = artist->albums[item->id];
+                    buildTracksMenu(artist->name, album->name);
+                }
+            } else {
+                // 在所有专辑列表中
+                if (item->id >= 0 && item->id < (int)allAlbums.size()) {
+                    Album* album = allAlbums[item->id];
+                    buildTracksMenu(album->artist, album->name);
+                }
+            }
+            break;
+            
+        case MENU_TRACKS:
+            // 播放选中的曲目
+            playSelectedSong();
+            break;
+    }
+    
+    updateMenuDisplay();
 }

@@ -5,6 +5,7 @@
 #include "AppManager.h"
 #include "SDFileManager.h"
 #include <cstring>  // 为 memset 添加
+#include <vector>   // 为音乐分类添加
 
 // ESP8266Audio 库
 #include <AudioOutput.h>
@@ -45,6 +46,42 @@ struct MusicAudioStatus {
     char currentSongName[128];
     bool hasError;
     char errorMessage[128];
+};
+
+// 音乐分类结构
+struct MusicTrack {
+    String artist;
+    String album;
+    String title;
+    String filePath;
+    String fileName;
+};
+
+struct Album {
+    String name;
+    String artist;
+    std::vector<MusicTrack*> tracks;
+};
+
+struct Artist {
+    String name;
+    std::vector<Album*> albums;
+    std::vector<MusicTrack*> singleTracks; // 没有专辑信息的单曲
+};
+
+// 菜单导航状态
+enum MenuLevel {
+    MENU_MAIN,      // 主菜单：Albums, Artists, Uncategorized
+    MENU_ARTISTS,   // 艺术家列表
+    MENU_ALBUMS,    // 专辑列表（可能是某个艺术家的专辑或所有专辑）
+    MENU_TRACKS     // 曲目列表
+};
+
+struct MenuState {
+    MenuLevel level;
+    String currentArtist;
+    String currentAlbum;
+    int selectedIndex;
 };
 
 // M5Speaker 音频输出类 - 与参考实现保持一致
@@ -110,42 +147,71 @@ private:
     SemaphoreHandle_t audioStatusMutex;
     MusicAudioStatus audioStatus;
     
-    // 音量滑块类
+    // 自定义音量滑块类
     class VolumeSlider : public UISlider {
-    private:
-        MusicApp* musicApp;
     public:
-        VolumeSlider(int id, int x, int y, int width, int height, int min, int max, int initial, const String& label, MusicApp* app)
-            : UISlider(id, x, y, width, height, min, max, initial, label), musicApp(app) {}
+        VolumeSlider(int id, int x, int y, int width, int height, const String& name)
+            : UISlider(id, x, y, width, height, 0, 100, 50, "Volume", name) {
+        }
         
-        void onValueChanged(int newValue) override {
-            if (musicApp) {
-                musicApp->setVolume(newValue);
+        void draw(LGFX_Device* display) override {
+            // 绘制滑块背景
+            display->fillRect(x, y, width, height, TFT_DARKGREY);
+            
+            // 绘制滑块边框
+            if (focused) {
+                display->drawRect(x - 1, y - 1, width + 2, height + 2, TFT_YELLOW);
+            } else {
+                display->drawRect(x, y, width, height, TFT_WHITE);
             }
+            
+            // 计算滑块位置（硬编码范围0-100）
+            int sliderPos = x + (getValue() * (width - 8)) / 100;
+            
+            // 绘制滑块指示器
+            display->fillRect(sliderPos, y + 2, 8, height - 4, TFT_WHITE);
+            
+            // 绘制音量文本
+            String volumeText = "Vol: " + String(getValue()) + "%";
+            display->setTextColor(TFT_WHITE);
+            display->drawString(volumeText, x + width + 5, y + 2);
         }
     };
-    
+
+    // 自定义音乐菜单列表类
+    class MusicMenuList : public UIMenuList {
+    public:
+        MusicMenuList(int id, int x, int y, int width, int height, const String& name, int itemHeight, MusicApp* app)
+            : UIMenuList(id, x, y, width, height, name, itemHeight), parentApp(app) {}
+        
+        void onItemSelected(MenuItem* item) override {
+            parentApp->handleMenuSelection(item);
+        }
+        
+    private:
+        MusicApp* parentApp;
+    };
+
     // UI 控件 ID 枚举
     enum ControlIds {
         TITLE_LABEL_ID = 1,
-        STATUS_LABEL_ID = 2,
-        SONG_LABEL_ID = 3,
-        VOLUME_LABEL_ID = 5,
-        PLAYLIST_ID = 6,
-        WINDOW_ID = 7,
-        VOLUME_SLIDER_ID = 12
+        SONG_LABEL_ID = 2,
+        STATUS_LABEL_ID = 3,
+        PLAYLIST_ID = 4,
+        VOLUME_SLIDER_ID = 5,
+        VOLUME_LABEL_ID = 6,
+        NOW_PLAYING_LABEL_ID = 7,
+        WINDOW_ID = 8
     };
     
     // UI 组件
     UILabel* titleLabel;
-    UILabel* statusLabel;
     UILabel* songLabel;
-    UILabel* volumeLabel;
-    UIMenuList* playList;
+    UILabel* statusLabel;
+    UILabel* nowPlayingLabel;  // 当前播放曲名标签
+    MusicMenuList* playList;  // 改为自定义菜单列表
+    VolumeSlider* volumeSlider;  // 音量滑块
     UIWindow* mainWindow;
-    
-    // 音量控制
-    VolumeSlider* volumeSlider;
     
     // 音频组件（仅在主线程使用）
     static constexpr uint8_t m5spk_virtual_channel = 0;
@@ -161,11 +227,20 @@ private:
     uint32_t pausedPosition;
     int currentVolume;
     
-    // 音乐文件列表
+    // 音乐文件列表和分类
     static const int MAX_MUSIC_FILES = 100;
     FileInfo musicFiles[MAX_MUSIC_FILES];
     int musicFileCount;
     int currentFileIndex;
+    
+    // 音乐分类数据
+    std::vector<Artist*> artists;
+    std::vector<Album*> allAlbums;
+    std::vector<MusicTrack*> uncategorizedTracks;
+    std::vector<MusicTrack*> allTracks;
+    
+    // 菜单导航状态
+    MenuState menuState;
 
 public:
     MusicApp(EventSystem* events, AppManager* manager);
@@ -199,7 +274,7 @@ private:
     void updateAudioError(const char* errorMsg);
     void cleanupAudioTask();
     
-    // 主线程方法
+    // 音乐文件和UI方法
     void scanMusicFiles();
     void playCurrentSong();
     void playSelectedSong();
@@ -208,6 +283,21 @@ private:
     void updateSongInfo();
     void cleanup();
     void drawInterface();
+    
+    // 音乐分类和菜单导航方法
+    void categorizeMusic();
+    MusicTrack* parseFileName(const String& fileName, const String& filePath);
+    Artist* findOrCreateArtist(const String& artistName);
+    Album* findOrCreateAlbum(Artist* artist, const String& albumName);
+    void clearMusicData();
+    void buildMainMenu();
+    void buildArtistsMenu();
+    void buildAlbumsMenu(const String& artistName = "");
+    void buildTracksMenu(const String& artistName = "", const String& albumName = "");
+    void navigateBack();
+    void navigateForward();
+    void updateMenuDisplay();
+    void handleMenuSelection(MenuItem* item);  // 处理菜单项选择
     
     // 静态回调函数
     static void metadataCallback(void *cbData, const char *type, bool isUnicode, const char *string);
