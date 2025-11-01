@@ -906,13 +906,13 @@ void MusicApp::buildAlbumsMenu(const String& artistName) {
     menuState.currentArtist = artistName;
     
     // 添加返回选项
-    playList->addItem("📁 ../", -1, "");
+    playList->addItem("../", -1, "");
     
     if (artistName.isEmpty()) {
         // 显示所有专辑
         for (size_t i = 0; i < allAlbums.size(); i++) {
             Album* album = allAlbums[i];
-            playList->addItem("💿 " + album->name + " - " + album->artist + " (" + String(album->tracks.size()) + ")", i, "");
+            playList->addItem("" + album->name + " - " + album->artist + " (" + String(album->tracks.size()) + ")", i, "");
         }
         titleLabel->setText("All Albums");
     } else {
@@ -920,7 +920,7 @@ void MusicApp::buildAlbumsMenu(const String& artistName) {
         Artist* artist = findOrCreateArtist(artistName);
         int index = 0;
         for (Album* album : artist->albums) {
-            playList->addItem("💿 " + album->name + " (" + String(album->tracks.size()) + ")", index++, "");
+            playList->addItem("" + album->name + " (" + String(album->tracks.size()) + ")", index++, "");
         }
         titleLabel->setText(artistName + " - Albums");
     }
@@ -935,7 +935,7 @@ void MusicApp::buildTracksMenu(const String& artistName, const String& albumName
     menuState.currentAlbum = albumName;
     
     // 添加返回选项
-    playList->addItem("📁 ../", -1, "");
+    playList->addItem("../", -1, "");
     
     std::vector<MusicTrack*> tracksToShow;
     

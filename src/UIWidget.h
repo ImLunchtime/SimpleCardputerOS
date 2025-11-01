@@ -112,6 +112,7 @@ public:
     void draw(LGFX_Device* display) override {
         if (!visible) return;
         
+        display->setFont(&fonts::efontCN_12);
         display->setTextColor(textColor);
         display->setTextSize(1);
         display->setCursor(x, y);
@@ -163,6 +164,7 @@ public:
         }
         
         // 计算文本居中位置
+        display->setFont(&fonts::efontCN_12);
         display->setTextSize(1);
         int textWidth = text.length() * 6;
         int textHeight = 8;
@@ -220,6 +222,7 @@ public:
         // 如果有标题，绘制标题栏
         if (!title.isEmpty()) {
             // display->fillRect(x + 1, y + 1, width - 2, 12, TFT_DARKGREY); 没有背景
+            display->setFont(&fonts::efontCN_12);
             display->setTextColor(TFT_WHITE);
             display->setTextSize(1);
             display->setCursor(x + 5, y + 3);
@@ -329,7 +332,7 @@ public:
             }
         }
         itemCount = 0;
-        selectedIndex = 0;
+        selectedIndex = 1;
     }
     
     MenuItem* getSelectedItem() {
@@ -436,6 +439,7 @@ public:
         
         // 绘制标签
         if (label.length() > 0) {
+            display->setFont(&fonts::efontCN_12);
             display->setTextColor(TFT_WHITE);
             display->setTextSize(1);
             display->setCursor(x, y - 12);
@@ -465,6 +469,7 @@ public:
         
         // 显示数值
         if (showValue) {
+            display->setFont(&fonts::efontCN_12);
             display->setTextColor(TFT_WHITE);
             display->setTextSize(1);
             String valueText = String(currentValue);
@@ -528,7 +533,7 @@ private:
     }
     
 public:
-    UIMenuList(int id, int x, int y, int width, int height, const String& name = "", int _itemHeight = 10)
+    UIMenuList(int id, int x, int y, int width, int height, const String& name = "", int _itemHeight = 14)
         : UIMenu(id, WIDGET_MENU_LIST, x, y, width, height, name),
           itemHeight(_itemHeight), scrollOffset(0) {
         visibleItems = (height - 4) / itemHeight;  // 减去边框的高度
@@ -540,7 +545,7 @@ public:
         drawMenuBorder(display);
         
         // 绘制菜单项
-        int startY = y + 1;
+        int startY = y;
         int drawCount = min(visibleItems, itemCount - scrollOffset);
         
         for (int i = 0; i < drawCount; i++) {
@@ -561,6 +566,7 @@ public:
                 color = TFT_BLACK;  // 选中项使用黑色文字
             }
             
+            display->setFont(&fonts::efontCN_12);
             display->setTextColor(color);
             display->setTextSize(1);
             display->setCursor(x + 4, itemY + (itemHeight - 8) / 2);
@@ -653,21 +659,22 @@ public:
                 display->drawRect(itemX, itemY, itemWidth, itemHeight, TFT_DARKGREY);
                 
                 // 绘制文本
-                uint16_t color = item->enabled ? textColor : disabledColor;
-                if (focused && row == selectedRow && col == selectedCol) {
-                    color = TFT_BLACK;
-                }
-                
-                display->setTextColor(color);
-                display->setTextSize(1);
-                
-                // 计算文本居中位置
-                int textWidth = item->text.length() * 6;
-                int textX = itemX + (itemWidth - textWidth) / 2;
-                int textY = itemY + (itemHeight - 8) / 2;
-                
-                display->setCursor(textX, textY);
-                display->print(item->text);
+                 uint16_t color = item->enabled ? textColor : disabledColor;
+                 if (focused && row == selectedRow && col == selectedCol) {
+                     color = TFT_BLACK;
+                 }
+                 
+                 display->setFont(&fonts::efontCN_12);
+                 display->setTextColor(color);
+                 display->setTextSize(1);
+                 
+                 // 计算文本居中位置
+                 int textWidth = item->text.length() * 6;
+                 int textX = itemX + (itemWidth - textWidth) / 2;
+                 int textY = itemY + (itemHeight - 8) / 2;
+                 
+                 display->setCursor(textX, textY);
+                 display->print(item->text);
             }
         }
     }

@@ -173,6 +173,7 @@ private:
             
             // 绘制音量文本
             String volumeText = "Vol: " + String(getValue()) + "%";
+            display->setFont(&fonts::efontCN_12);
             display->setTextColor(TFT_WHITE);
             display->drawString(volumeText, x + width + 5, y + 2);
         }
@@ -182,7 +183,7 @@ private:
     class MusicMenuList : public UIMenuList {
     public:
         MusicMenuList(int id, int x, int y, int width, int height, const String& name, int itemHeight, MusicApp* app)
-            : UIMenuList(id, x, y, width, height, name, itemHeight), parentApp(app) {}
+            : UIMenuList(id, x, y, width, height, name, 14), parentApp(app) {}
         
         void onItemSelected(MenuItem* item) override {
             parentApp->handleMenuSelection(item);
