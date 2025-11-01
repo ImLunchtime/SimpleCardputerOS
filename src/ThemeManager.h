@@ -54,6 +54,27 @@ struct MenuItemDrawParams {
                           disabledColor(TFT_DARKGREY), backgroundColor(TFT_BLACK) {}
 };
 
+// 网格菜单项绘制参数
+struct GridMenuItemDrawParams {
+    LGFX_Device* display;
+    int x, y, width, height;
+    String text;
+    bool selected;
+    bool enabled;
+    bool focused;  // 整个网格菜单是否有焦点
+    uint16_t textColor;
+    uint16_t selectedColor;
+    uint16_t disabledColor;
+    uint16_t backgroundColor;
+    uint16_t borderColor;
+    
+    GridMenuItemDrawParams() : display(nullptr), x(0), y(0), width(0), height(0),
+                              text(""), selected(false), enabled(true), focused(false),
+                              textColor(TFT_WHITE), selectedColor(TFT_YELLOW),
+                              disabledColor(TFT_DARKGREY), backgroundColor(TFT_BLACK),
+                              borderColor(TFT_DARKGREY) {}
+};
+
 // 主题接口 - 所有主题都必须实现这些函数
 class Theme {
 public:
@@ -68,6 +89,7 @@ public:
     // 菜单相关绘制函数
     virtual void drawMenuBorder(const ThemeDrawParams& params) = 0;
     virtual void drawMenuItem(const MenuItemDrawParams& params) = 0;
+    virtual void drawGridMenuItem(const GridMenuItemDrawParams& params) = 0;
     
     // 清除区域函数
     virtual void clearArea(LGFX_Device* display, int x, int y, int width, int height) = 0;

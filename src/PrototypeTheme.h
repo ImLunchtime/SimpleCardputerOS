@@ -140,6 +140,60 @@ public:
         params.display->print(params.text);
     }
     
+    void drawGridMenuItem(const GridMenuItemDrawParams& params) override {
+        if (!params.display) return;
+        if (params.width <= 0 || params.height <= 0) return;
+        
+        // 绘制网格项背景
+        uint16_t bgColor = TFT_BLACK;  // 默认黑色背景
+        uint16_t borderColor = TFT_WHITE;  // 白色边框
+        
+        if (params.focused && params.selected) {
+            // 选中状态：黄色背景
+            bgColor = TFT_YELLOW;
+            borderColor = TFT_WHITE;
+        } else if (!params.enabled) {
+            // 禁用状态：深灰色背景
+            bgColor = TFT_DARKGREY;
+            borderColor = TFT_DARKGREY;
+        }
+        
+        // 绘制背景
+        params.display->fillRect(params.x + 1, params.y + 1, 
+                               params.width - 2, params.height - 2, bgColor);
+        
+        // 绘制边框
+        params.display->drawRect(params.x, params.y, 
+                               params.width, params.height, borderColor);
+        
+        // 如果选中且有焦点，绘制额外的高亮边框
+        if (params.focused && params.selected) {
+            params.display->drawRect(params.x - 1, params.y - 1, 
+                                   params.width + 2, params.height + 2, TFT_YELLOW);
+        }
+        
+        // 绘制文本
+        if (!params.text.isEmpty()) {
+            uint16_t textColor = TFT_WHITE;
+            if (!params.enabled) {
+                textColor = TFT_DARKGREY;
+            } else if (params.focused && params.selected) {
+                textColor = TFT_BLACK;  // 选中时使用黑色文本
+            }
+            
+            params.display->setTextColor(textColor);
+            params.display->setTextSize(1);
+            
+            // 计算文本居中位置
+            int textWidth = params.text.length() * 6;
+            int textX = params.x + (params.width - textWidth) / 2;
+            int textY = params.y + (params.height - 8) / 2;
+            
+            params.display->setCursor(textX, textY);
+            params.display->print(params.text);
+        }
+    }
+    
     void clearArea(LGFX_Device* display, int x, int y, int width, int height) override {
         if (display) {
             display->fillRect(x, y, width, height, TFT_BLACK);

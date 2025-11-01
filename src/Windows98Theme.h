@@ -193,6 +193,56 @@ public:
         params.display->print(params.text);
     }
     
+    void drawGridMenuItem(const GridMenuItemDrawParams& params) override {
+        if (!params.display) return;
+        if (params.width <= 0 || params.height <= 0) return;
+        
+        // 绘制网格项背景
+        uint16_t bgColor = WIN98_EDIT_BACKGROUND;  // 默认白色背景
+        
+        if (params.focused && params.selected) {
+            // 选中状态：蓝色高亮背景
+            bgColor = WIN98_MENU_HIGHLIGHT;
+        } else if (!params.enabled) {
+            // 禁用状态：浅灰色背景
+            bgColor = WIN98_BUTTON_FACE;
+        }
+        
+        // 绘制背景
+        params.display->fillRect(params.x + 2, params.y + 2, 
+                               params.width - 4, params.height - 4, bgColor);
+        
+        // 绘制3D边框效果
+        if (params.focused && params.selected) {
+            // 选中时绘制凹陷效果
+            drawSunkenBorder(params.display, params.x, params.y, params.width, params.height);
+        } else {
+            // 正常状态绘制凸起效果
+            drawRaisedBorder(params.display, params.x, params.y, params.width, params.height);
+        }
+        
+        // 绘制文本
+        if (!params.text.isEmpty()) {
+            uint16_t textColor = WIN98_WINDOW_TEXT;  // 默认黑色文本
+            if (!params.enabled) {
+                textColor = WIN98_BUTTON_SHADOW;  // 禁用时灰色文本
+            } else if (params.focused && params.selected) {
+                textColor = WIN98_CAPTION_TEXT;  // 选中时白色文本
+            }
+            
+            params.display->setTextColor(textColor);
+            params.display->setTextSize(1);
+            
+            // 计算文本居中位置
+            int textWidth = params.text.length() * 6;
+            int textX = params.x + (params.width - textWidth) / 2;
+            int textY = params.y + (params.height - 8) / 2;
+            
+            params.display->setCursor(textX, textY);
+            params.display->print(params.text);
+        }
+    }
+    
     void clearArea(LGFX_Device* display, int x, int y, int width, int height) override {
         if (!display) return;
         display->fillRect(x, y, width, height, WIN98_WINDOW_BACKGROUND);

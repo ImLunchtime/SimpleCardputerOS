@@ -11,6 +11,7 @@
 #include "PrototypeTheme.h"
 #include "DarkTheme.h"
 #include "Windows98Theme.h"
+#include "FrutigerAeroTheme.h"
 
 // 全局对象
 EventSystem globalEventSystem;
@@ -40,6 +41,7 @@ void setup() {
     globalThemeManager->registerTheme(new PrototypeTheme());
     globalThemeManager->registerTheme(new DarkTheme());
     globalThemeManager->registerTheme(new Windows98Theme());
+    globalThemeManager->registerTheme(new FrutigerAeroTheme());
     // 设置Dark主题为默认主题
     globalThemeManager->setCurrentTheme(1);
   }
@@ -49,7 +51,7 @@ void setup() {
   globalAppManager.registerApp("theme", "Theme", &themeApp);
   globalAppManager.registerApp("music", "Music", &musicApp);
   //globalAppManager.registerApp("settings", "Settings", &settingsApp);
-  globalAppManager.registerApp("filemanager", "File Manager", &fileManagerApp);
+  globalAppManager.registerApp("filemanager", "Files", &fileManagerApp);
   globalAppManager.registerApp("test", "Test", &testApp);
   
   // 初始化应用管理器（启动启动器）

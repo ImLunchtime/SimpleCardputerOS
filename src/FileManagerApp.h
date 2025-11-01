@@ -45,7 +45,7 @@ public:
         uiManager->addWidget(mainWindow);
         
         // 创建标题标签
-        titleLabel = new UILabel(TITLE_LABEL_ID, 5, 5, "File Manager");
+        titleLabel = new UILabel(TITLE_LABEL_ID, 5, 5, "Files");
         titleLabel->setTextColor(TFT_WHITE);
         uiManager->addWidget(titleLabel);
         

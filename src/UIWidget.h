@@ -750,31 +750,54 @@ public:
                 int itemX = x + 2 + col * itemWidth;
                 int itemY = y + 2 + row * itemHeight;
                 
-                // 绘制选中背景
-                if (focused && row == selectedRow && col == selectedCol) {
-                    display->fillRect(itemX, itemY, itemWidth, itemHeight, selectedColor);
+                // 使用主题系统绘制网格菜单项
+                Theme* currentTheme = getCurrentTheme();
+                if (currentTheme) {
+                    GridMenuItemDrawParams params;
+                    params.display = display;
+                    params.x = itemX;
+                    params.y = itemY;
+                    params.width = itemWidth;
+                    params.height = itemHeight;
+                    params.text = item->text;
+                    params.selected = (row == selectedRow && col == selectedCol);
+                    params.enabled = item->enabled;
+                    params.focused = focused;
+                    params.textColor = textColor;
+                    params.selectedColor = selectedColor;
+                    params.disabledColor = disabledColor;
+                    params.backgroundColor = TFT_BLACK;
+                    params.borderColor = TFT_DARKGREY;
+                    
+                    currentTheme->drawGridMenuItem(params);
+                } else {
+                    // 回退到原始绘制方法
+                    // 绘制选中背景
+                    if (focused && row == selectedRow && col == selectedCol) {
+                        display->fillRect(itemX, itemY, itemWidth, itemHeight, selectedColor);
+                    }
+                    
+                    // 绘制边框
+                    display->drawRect(itemX, itemY, itemWidth, itemHeight, TFT_DARKGREY);
+                    
+                    // 绘制文本
+                    uint16_t color = item->enabled ? textColor : disabledColor;
+                    if (focused && row == selectedRow && col == selectedCol) {
+                        color = TFT_BLACK;
+                    }
+                    
+                    display->setFont(&fonts::efontCN_12);
+                    display->setTextColor(color);
+                    display->setTextSize(1);
+                    
+                    // 计算文本居中位置
+                    int textWidth = item->text.length() * 6;
+                    int textX = itemX + (itemWidth - textWidth) / 2;
+                    int textY = itemY + (itemHeight - 8) / 2;
+                    
+                    display->setCursor(textX, textY);
+                    display->print(item->text);
                 }
-                
-                // 绘制边框
-                display->drawRect(itemX, itemY, itemWidth, itemHeight, TFT_DARKGREY);
-                
-                // 绘制文本
-                 uint16_t color = item->enabled ? textColor : disabledColor;
-                 if (focused && row == selectedRow && col == selectedCol) {
-                     color = TFT_BLACK;
-                 }
-                 
-                 display->setFont(&fonts::efontCN_12);
-                 display->setTextColor(color);
-                 display->setTextSize(1);
-                 
-                 // 计算文本居中位置
-                 int textWidth = item->text.length() * 6;
-                 int textX = itemX + (itemWidth - textWidth) / 2;
-                 int textY = itemY + (itemHeight - 8) / 2;
-                 
-                 display->setCursor(textX, textY);
-                 display->print(item->text);
             }
         }
     }
