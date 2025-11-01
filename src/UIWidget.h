@@ -2,6 +2,7 @@
 #include <M5Cardputer.h>
 #include <SD.h>
 #include "EventSystem.h"
+#include "ThemeManager.h"
 
 // UI控件类型枚举
 enum UIWidgetType {
@@ -112,11 +113,27 @@ public:
     void draw(LGFX_Device* display) override {
         if (!visible) return;
         
-        display->setFont(&fonts::efontCN_12);
-        display->setTextColor(textColor);
-        display->setTextSize(1);
-        display->setCursor(x, y);
-        display->print(text);
+        Theme* theme = getCurrentTheme();
+        if (theme) {
+            ThemeDrawParams params;
+            params.display = display;
+            params.x = x;
+            params.y = y;
+            params.width = width;
+            params.height = height;
+            params.visible = visible;
+            params.text = text;
+            params.textColor = textColor;
+            
+            theme->drawLabel(params);
+        } else {
+            // 回退到原始绘制方式
+            display->setFont(&fonts::efontCN_12);
+            display->setTextColor(textColor);
+            display->setTextSize(1);
+            display->setCursor(x, y);
+            display->print(text);
+        }
     }
     
     void drawPartial(LGFX_Device* display) override {
@@ -151,30 +168,43 @@ public:
     void draw(LGFX_Device* display) override {
         if (!visible) return;
         
-        // 绘制黑色背景
-        display->fillRect(x, y, width, height, TFT_BLACK);
-        
-        // 绘制边框
-        display->drawRect(x, y, width, height, borderColor);
-        
-        // 如果聚焦，绘制黄色外框
-        if (focused) {
-            display->drawRect(x - 1, y - 1, width + 2, height + 2, TFT_YELLOW);
-            display->drawRect(x - 2, y - 2, width + 4, height + 4, TFT_YELLOW);
+        Theme* theme = getCurrentTheme();
+        if (theme) {
+            ThemeDrawParams params;
+            params.display = display;
+            params.x = x;
+            params.y = y;
+            params.width = width;
+            params.height = height;
+            params.visible = visible;
+            params.focused = focused;
+            params.text = text;
+            params.textColor = textColor;
+            params.borderColor = borderColor;
+            params.backgroundColor = TFT_BLACK;
+            
+            theme->drawButton(params);
+        } else {
+            // 回退到原始绘制方式
+            display->fillRect(x, y, width, height, TFT_BLACK);
+            display->drawRect(x, y, width, height, borderColor);
+            
+            if (focused) {
+                display->drawRect(x - 1, y - 1, width + 2, height + 2, TFT_YELLOW);
+                display->drawRect(x - 2, y - 2, width + 4, height + 4, TFT_YELLOW);
+            }
+            
+            display->setFont(&fonts::efontCN_12);
+            display->setTextSize(1);
+            int textWidth = text.length() * 6;
+            int textHeight = 8;
+            int textX = x + (width - textWidth) / 2;
+            int textY = y + (height - textHeight) / 2;
+            
+            display->setTextColor(textColor);
+            display->setCursor(textX, textY);
+            display->print(text);
         }
-        
-        // 计算文本居中位置
-        display->setFont(&fonts::efontCN_12);
-        display->setTextSize(1);
-        int textWidth = text.length() * 6;
-        int textHeight = 8;
-        int textX = x + (width - textWidth) / 2;
-        int textY = y + (height - textHeight) / 2;
-        
-        // 绘制居中文本
-        display->setTextColor(textColor);
-        display->setCursor(textX, textY);
-        display->print(text);
     }
     
     bool handleKeyEvent(const KeyEvent& event) override {
@@ -213,20 +243,33 @@ public:
     void draw(LGFX_Device* display) override {
         if (!visible) return;
         
-        // 绘制黑色背景
-        display->fillRect(x, y, width, height, TFT_BLACK);
-        
-        // 绘制边框
-        display->drawRect(x, y, width, height, borderColor);
-        
-        // 如果有标题，绘制标题栏
-        if (!title.isEmpty()) {
-            // display->fillRect(x + 1, y + 1, width - 2, 12, TFT_DARKGREY); 没有背景
-            display->setFont(&fonts::efontCN_12);
-            display->setTextColor(TFT_WHITE);
-            display->setTextSize(1);
-            display->setCursor(x + 5, y + 3);
-            display->print(title);
+        Theme* theme = getCurrentTheme();
+        if (theme) {
+            ThemeDrawParams params;
+            params.display = display;
+            params.x = x;
+            params.y = y;
+            params.width = width;
+            params.height = height;
+            params.visible = visible;
+            params.text = title;
+            params.textColor = TFT_WHITE;
+            params.borderColor = borderColor;
+            params.backgroundColor = TFT_BLACK;
+            
+            theme->drawWindow(params);
+        } else {
+            // 回退到原始绘制方式
+            display->fillRect(x, y, width, height, TFT_BLACK);
+            display->drawRect(x, y, width, height, borderColor);
+            
+            if (!title.isEmpty()) {
+                display->setFont(&fonts::efontCN_12);
+                display->setTextColor(TFT_WHITE);
+                display->setTextSize(1);
+                display->setCursor(x + 5, y + 3);
+                display->print(title);
+            }
         }
     }
     
@@ -369,17 +412,32 @@ public:
     
 protected:
     void drawMenuBorder(LGFX_Device* display) {
-        // 绘制背景
-        display->fillRect(x, y, width, height, TFT_BLACK);
-        
-        // 绘制边框
-        display->drawRect(x, y, width, height, borderColor);
-        
-        // 如果聚焦，绘制焦点框
-        if (focused) {
-            uint16_t focusColor = TFT_YELLOW;  // 一级焦点使用黄色
-            display->drawRect(x - 1, y - 1, width + 2, height + 2, focusColor);
-            display->drawRect(x - 2, y - 2, width + 4, height + 4, focusColor);
+        // 使用主题系统绘制菜单边框
+        Theme* currentTheme = getCurrentTheme();
+        if (currentTheme) {
+            ThemeDrawParams params;
+            params.x = x;
+            params.y = y;
+            params.width = width;
+            params.height = height;
+            params.focused = focused;
+            params.borderColor = borderColor;
+            
+            currentTheme->drawMenuBorder(params);
+        } else {
+            // 回退到原始绘制方法
+            // 绘制背景
+            display->fillRect(x, y, width, height, TFT_BLACK);
+            
+            // 绘制边框
+            display->drawRect(x, y, width, height, borderColor);
+            
+            // 如果聚焦，绘制焦点框
+            if (focused) {
+                uint16_t focusColor = TFT_YELLOW;  // 一级焦点使用黄色
+                display->drawRect(x - 1, y - 1, width + 2, height + 2, focusColor);
+                display->drawRect(x - 2, y - 2, width + 4, height + 4, focusColor);
+            }
         }
     }
 };
@@ -437,45 +495,67 @@ public:
     void draw(LGFX_Device* display) override {
         if (!visible) return;
         
-        // 绘制标签
-        if (label.length() > 0) {
-            display->setFont(&fonts::efontCN_12);
-            display->setTextColor(TFT_WHITE);
-            display->setTextSize(1);
-            display->setCursor(x, y - 12);
-            display->print(label);
-        }
-        
-        // 计算滑块轨道区域
-        int trackY = y + (height - 4) / 2;
-        int trackHeight = 4;
-        
-        // 绘制轨道
-        uint16_t borderColor = focused ? focusColor : TFT_WHITE;
-        display->drawRect(x, trackY, width, trackHeight, borderColor);
-        display->fillRect(x + 1, trackY + 1, width - 2, trackHeight - 2, trackColor);
-        
-        // 计算滑块位置
-        int range = maxValue - minValue;
-        int thumbX = x;
-        if (range > 0) {
-            thumbX = x + ((currentValue - minValue) * (width - 8)) / range;
-        }
-        
-        // 绘制滑块
-        uint16_t currentThumbColor = focused ? focusColor : thumbColor;
-        display->fillRect(thumbX, y, 8, height, currentThumbColor);
-        display->drawRect(thumbX, y, 8, height, TFT_BLACK);
-        
-        // 显示数值
-        if (showValue) {
-            display->setFont(&fonts::efontCN_12);
-            display->setTextColor(TFT_WHITE);
-            display->setTextSize(1);
-            String valueText = String(currentValue);
-            int textWidth = valueText.length() * 6;
-            display->setCursor(x + width - textWidth, y + height + 2);
-            display->print(valueText);
+        // 使用主题系统绘制滑块
+        Theme* currentTheme = getCurrentTheme();
+        if (currentTheme) {
+            SliderDrawParams params;
+            params.display = display;
+            params.x = x;
+            params.y = y;
+            params.width = width;
+            params.height = height;
+            params.minValue = minValue;
+            params.maxValue = maxValue;
+            params.currentValue = currentValue;
+            params.label = label;
+            params.showValue = showValue;
+            params.focused = focused;
+            params.trackColor = trackColor;
+            params.thumbColor = thumbColor;
+            
+            currentTheme->drawSlider(params);
+        } else {
+            // 回退到原始绘制方法
+            // 绘制标签
+            if (label.length() > 0) {
+                display->setFont(&fonts::efontCN_12);
+                display->setTextColor(TFT_WHITE);
+                display->setTextSize(1);
+                display->setCursor(x, y - 12);
+                display->print(label);
+            }
+            
+            // 计算滑块轨道区域
+            int trackY = y + (height - 4) / 2;
+            int trackHeight = 4;
+            
+            // 绘制轨道
+            uint16_t borderColor = focused ? focusColor : TFT_WHITE;
+            display->drawRect(x, trackY, width, trackHeight, borderColor);
+            display->fillRect(x + 1, trackY + 1, width - 2, trackHeight - 2, trackColor);
+            
+            // 计算滑块位置
+            int range = maxValue - minValue;
+            int thumbX = x;
+            if (range > 0) {
+                thumbX = x + ((currentValue - minValue) * (width - 8)) / range;
+            }
+            
+            // 绘制滑块
+            uint16_t currentThumbColor = focused ? focusColor : thumbColor;
+            display->fillRect(thumbX, y, 8, height, currentThumbColor);
+            display->drawRect(thumbX, y, 8, height, TFT_BLACK);
+            
+            // 显示数值
+            if (showValue) {
+                display->setFont(&fonts::efontCN_12);
+                display->setTextColor(TFT_WHITE);
+                display->setTextSize(1);
+                String valueText = String(currentValue);
+                int textWidth = valueText.length() * 6;
+                display->setCursor(x + width - textWidth, y + height + 2);
+                display->print(valueText);
+            }
         }
     }
     
@@ -555,25 +635,45 @@ public:
             MenuItem* item = items[itemIndex];
             int itemY = startY + i * itemHeight;
             
-            // 绘制选中背景
-            if (focused && itemIndex == selectedIndex) {
-                display->fillRect(x + 1, itemY, width - 2, itemHeight, selectedColor);
+            // 使用主题系统绘制菜单项
+            Theme* currentTheme = getCurrentTheme();
+            if (currentTheme) {
+                MenuItemDrawParams params;
+                params.display = display;
+                params.x = x + 1;
+                params.y = itemY;
+                params.width = width - 2;
+                params.height = itemHeight;
+                params.text = clipText(item->text, width - 2);
+                params.selected = (focused && itemIndex == selectedIndex);
+                params.enabled = item->enabled;
+                params.selectedColor = selectedColor;
+                params.textColor = textColor;
+                params.disabledColor = disabledColor;
+                
+                currentTheme->drawMenuItem(params);
+            } else {
+                // 回退到原始绘制方法
+                // 绘制选中背景
+                if (focused && itemIndex == selectedIndex) {
+                    display->fillRect(x + 1, itemY, width - 2, itemHeight, selectedColor);
+                }
+                
+                // 绘制文本（使用裁剪后的文本）
+                uint16_t color = item->enabled ? textColor : disabledColor;
+                if (focused && itemIndex == selectedIndex) {
+                    color = TFT_BLACK;  // 选中项使用黑色文字
+                }
+                
+                display->setFont(&fonts::efontCN_12);
+                display->setTextColor(color);
+                display->setTextSize(1);
+                display->setCursor(x + 4, itemY + (itemHeight - 8) / 2);
+                
+                // 使用裁剪后的文本
+                String clippedText = clipText(item->text, width - 2);
+                display->print(clippedText);
             }
-            
-            // 绘制文本（使用裁剪后的文本）
-            uint16_t color = item->enabled ? textColor : disabledColor;
-            if (focused && itemIndex == selectedIndex) {
-                color = TFT_BLACK;  // 选中项使用黑色文字
-            }
-            
-            display->setFont(&fonts::efontCN_12);
-            display->setTextColor(color);
-            display->setTextSize(1);
-            display->setCursor(x + 4, itemY + (itemHeight - 8) / 2);
-            
-            // 使用裁剪后的文本
-            String clippedText = clipText(item->text, width - 2);
-            display->print(clippedText);
         }
     }
     

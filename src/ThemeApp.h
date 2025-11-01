@@ -1,0 +1,138 @@
+#pragma once
+#include "App.h"
+#include "UIManager.h"
+#include "EventSystem.h"
+#include "AppManager.h"
+#include "ThemeManager.h"
+#include "DefaultTheme.h"
+#include "DarkTheme.h"
+
+class ThemeApp : public App {
+private:
+    EventSystem* eventSystem;
+    
+    // 控件ID定义
+    enum ControlIds {
+        STATUS_LABEL_ID = 2,
+        THEME_MENU_ID = 3,
+        WINDOW_ID = 5,
+        PREVIEW_LABEL_ID = 6
+    };
+    
+    // 控件引用
+    UILabel* statusLabel;
+    UILabel* previewLabel;
+    UIMenuList* themeMenu;
+    UIWindow* mainWindow;
+    
+    // 自定义主题菜单
+    class ThemeMenuList : public UIMenuList {
+    public:
+        ThemeMenuList(int id, int x, int y, int width, int height, const String& name, int itemHeight, ThemeApp* app)
+            : UIMenuList(id, x, y, width, height, name, itemHeight), parentApp(app) {}
+        
+        void onItemSelected(MenuItem* item) override {
+            parentApp->handleThemeSelection(item);
+        }
+        
+    private:
+        ThemeApp* parentApp;
+    };
+
+public:
+    ThemeApp(EventSystem* events) 
+        : eventSystem(events) {}
+
+    void setup() override {
+        // 初始化主题系统并注册主题
+        if (globalThemeManager) {
+            globalThemeManager->registerTheme(new DefaultTheme());
+            globalThemeManager->registerTheme(new DarkTheme());
+        }
+        
+        // 创建主窗口
+        mainWindow = new UIWindow(1, 0, 0, 320, 240, "Theme Settings");
+        uiManager->addWidget(mainWindow);
+        
+        // 创建状态标签
+        statusLabel = new UILabel(2, 10, 30, "Theme Manager");
+        uiManager->addWidget(statusLabel);
+        
+        // 创建预览标签
+        previewLabel = new UILabel(3, 10, 60, "Current: Default");
+        uiManager->addWidget(previewLabel);
+        
+        // 创建主题菜单
+        themeMenu = new ThemeMenuList(4, 10, 90, 300, 120, "ThemeMenu", 15, this);
+        
+        // 添加主题选项
+        if (globalThemeManager) {
+            for (int i = 0; i < globalThemeManager->getThemeCount(); i++) {
+                Theme* theme = globalThemeManager->getTheme(i);
+                if (theme) {
+                    themeMenu->addItem(theme->getThemeName(), 100 + i);
+                }
+            }
+        }
+        
+        uiManager->addWidget(themeMenu);
+        
+        updateCurrentThemeStatus();
+    }
+
+    void loop() override {
+        // 主题相关逻辑可以在这里实现
+    }
+
+    void onKeyEvent(const KeyEvent& event) override {
+        // 将事件传递给UI管理器处理
+        if (uiManager->handleKeyEvent(event)) {
+            updateStatus();
+            // 使用局部刷新避免闪烁
+            uiManager->refreshAppArea();
+        }
+    }
+    
+    void handleThemeSelection(MenuItem* item) {
+        if (!item || !globalThemeManager) return;
+        
+        // 查找并设置选中的主题
+        for (int i = 0; i < globalThemeManager->getThemeCount(); i++) {
+            Theme* theme = globalThemeManager->getTheme(i);
+            if (theme && theme->getThemeName() == item->text) {
+                globalThemeManager->setCurrentTheme(i);
+                updateCurrentThemeStatus();
+                
+                // 刷新所有UI元素以应用新主题
+                if (uiManager) {
+                    uiManager->refresh();
+                }
+                break;
+            }
+        }
+    }
+
+private:
+    void updateStatus() {
+        UIWidget* focusedWidget = uiManager->getCurrentFocusedWidget();
+        if (focusedWidget) {
+            String status = "Focus: " + focusedWidget->getName();
+            // 只在不是主题选择状态时更新状态
+            if (status.indexOf("ThemeMenu") == -1) {
+                statusLabel->setText(status);
+            }
+        }
+    }
+    
+    void updateCurrentThemeStatus() {
+        if (!globalThemeManager) return;
+        
+        Theme* currentTheme = globalThemeManager->getCurrentTheme();
+        if (currentTheme) {
+            String currentStatus = "Current: " + currentTheme->getThemeName();
+            previewLabel->setText(currentStatus);
+        } else {
+            previewLabel->setText("Current: No theme active");
+        }
+    }
+};

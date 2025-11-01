@@ -6,10 +6,14 @@
 #include "SettingsApp.h"
 #include "TestApp.h"
 #include "FileManagerApp.h"
+#include "ThemeApp.h"
+#include "ThemeManager.h"
 
 // 全局对象
 EventSystem globalEventSystem;
 AppManager globalAppManager(&globalEventSystem);
+ThemeManager globalThemeManagerInstance;
+ThemeManager* globalThemeManager = &globalThemeManagerInstance;
 
 // 应用实例
 LauncherApp launcherApp(&globalEventSystem);
@@ -17,6 +21,7 @@ MusicApp musicApp(&globalEventSystem, &globalAppManager);
 SettingsApp settingsApp(&globalEventSystem);
 TestApp testApp(&globalEventSystem);
 FileManagerApp fileManagerApp(&globalEventSystem, &globalAppManager);
+ThemeApp themeApp(&globalEventSystem);
 
 void setup() {
   // 初始化M5Cardputer
@@ -29,10 +34,11 @@ void setup() {
   
   // 注册应用到应用管理器
   globalAppManager.registerApp("launcher", "Launcher", &launcherApp, true);  // 启动器
+  globalAppManager.registerApp("theme", "Theme", &themeApp);
   globalAppManager.registerApp("music", "Music", &musicApp);
-  globalAppManager.registerApp("settings", "Settings", &settingsApp);
-  globalAppManager.registerApp("test", "Test", &testApp);
+  //globalAppManager.registerApp("settings", "Settings", &settingsApp);
   globalAppManager.registerApp("filemanager", "File Manager", &fileManagerApp);
+  globalAppManager.registerApp("test", "Test", &testApp);
   
   // 初始化应用管理器（启动启动器）
   globalAppManager.initialize();

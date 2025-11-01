@@ -64,8 +64,8 @@ public:
         // 创建状态标签
         statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 10, 25, "Select app", "Status");
         
-        // 创建网格菜单 - 2x2网格布局适配更小窗口
-        gridMenu = new LauncherMenuGrid(GRID_MENU_ID, 10, 40, 140, 60, 2, 2, "AppGrid", this);
+        // 创建网格菜单 - 3x2网格布局以显示更多应用
+        gridMenu = new LauncherMenuGrid(GRID_MENU_ID, 10, 40, 140, 60, 3, 2, "AppGrid", this);
         uiManager->addWidget(gridMenu);
         
         // 从应用管理器获取应用列表并添加到菜单
