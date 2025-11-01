@@ -73,7 +73,7 @@ void MusicApp::setup() {
     uiManager->addWidget(playList);
     
     // 创建当前播放曲名标签 - 位于底部
-    nowPlayingLabel = new UILabel(NOW_PLAYING_LABEL_ID, 25, 100, "♪ Not Playing");
+    nowPlayingLabel = new UILabel(NOW_PLAYING_LABEL_ID, 25, 100, "Not Playing");
     nowPlayingLabel->setTextColor(TFT_CYAN);
     uiManager->addWidget(nowPlayingLabel);
     
@@ -199,7 +199,7 @@ void MusicApp::initializeDualCoreAudio() {
     M5Cardputer.Speaker.setVolume(currentVolume);
     
     isInitialized = true;
-    statusLabel->setText("Dual-core audio system ready");
+    statusLabel->setText("Ready");
 }
 
 // 发送音频命令到音频任务
@@ -300,10 +300,10 @@ void MusicApp::updateUIFromAudioStatus() {
                 nowPlayingLabel->setText(nowPlaying);
                 nowPlayingLabel->setTextColor(TFT_CYAN);
             } else if (audioStatus.isPaused) {
-                nowPlayingLabel->setText("⏸ Paused");
+                nowPlayingLabel->setText("Paused");
                 nowPlayingLabel->setTextColor(TFT_ORANGE);
             } else {
-                nowPlayingLabel->setText("♪ Not Playing");
+                nowPlayingLabel->setText("Not Playing");
                 nowPlayingLabel->setTextColor(TFT_DARKGREY);
             }
         }
@@ -870,9 +870,9 @@ void MusicApp::buildMainMenu() {
     menuState.currentAlbum = "";
     
     // 添加主菜单项
-    playList->addItem("📁 Albums (" + String(allAlbums.size()) + ")", 0, "");
-    playList->addItem("🎤 Artists (" + String(artists.size()) + ")", 1, "");
-    playList->addItem("📄 Uncategorized (" + String(uncategorizedTracks.size()) + ")", 2, "");
+    playList->addItem("Albums (" + String(allAlbums.size()) + ")", 0, "");
+    playList->addItem("Artists (" + String(artists.size()) + ")", 1, "");
+    playList->addItem("Uncategorized (" + String(uncategorizedTracks.size()) + ")", 2, "");
     
     titleLabel->setText("Music Library");
     songLabel->setText("Select a category");
@@ -883,7 +883,7 @@ void MusicApp::buildArtistsMenu() {
     menuState.level = MENU_ARTISTS;
     
     // 添加返回选项
-    playList->addItem("📁 ../", -1, "");
+    playList->addItem("../", -1, "");
     
     for (size_t i = 0; i < artists.size(); i++) {
         Artist* artist = artists[i];
@@ -893,7 +893,7 @@ void MusicApp::buildArtistsMenu() {
         }
         totalTracks += artist->singleTracks.size();
         
-        playList->addItem("🎤 " + artist->name + " (" + String(totalTracks) + ")", i, "");
+        playList->addItem(artist->name + " (" + String(totalTracks) + ")", i, "");
     }
     
     titleLabel->setText("Artists");
