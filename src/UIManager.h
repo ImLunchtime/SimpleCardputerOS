@@ -409,12 +409,6 @@ public:
         return button;
     }
     
-    UIInput* createInput(int id, int x, int y, int width, int height, const String& placeholder = "", const String& name = "") {
-        UIInput* input = new UIInput(id, x, y, width, height, placeholder, name);
-        addWidget(input);
-        return input;
-    }
-    
     UIWindow* createWindow(int id, int x, int y, int width, int height, const String& title = "", const String& name = "") {
         UIWindow* window = new UIWindow(id, x, y, width, height, title, name);
         addWidget(window);
