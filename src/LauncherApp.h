@@ -95,16 +95,7 @@ public:
                 batteryLabel->setTextColor(TFT_RED);
             }
             // 使用局部重绘更新电池电量标签
-            uiManager->drawWidgetPartial(BATTERY_LABEL_ID);
-            needsRedraw = true;
-        }
-        
-        // 更新电池电压标签显示
-        String newVoltageText = String(batteryManager.getBatteryVoltage()) + "mV";
-        if (batteryVoltageLabel->getText() != newVoltageText) {
-            batteryVoltageLabel->setText(newVoltageText);
-            // 使用局部重绘更新电池电压标签
-            uiManager->drawWidgetPartial(BATTERY_VOLTAGE_LABEL_ID);
+            //uiManager->drawWidgetPartial(BATTERY_LABEL_ID);
             needsRedraw = true;
         }
         

@@ -116,10 +116,10 @@ public:
         if (!params.visible || !params.display) return;
         
         // 绘制窗口背景
-        params.display->fillRect(params.x + 2, params.y + 20, params.width - 4, params.height - 22, WIN98_WINDOW_BACKGROUND);
+        params.display->fillRect(params.x + 2, params.y + 15, params.width - 3, params.height - 17, WIN98_WINDOW_BACKGROUND);
         
         // 绘制标题栏
-        params.display->fillRect(params.x + 2, params.y + 2, params.width - 4, 18, WIN98_ACTIVE_CAPTION);
+        params.display->fillRect(params.x + 2, params.y + 2, params.width - 4, 14, WIN98_ACTIVE_CAPTION);
         
         // 绘制窗口边框
         drawRaisedBorder(params.display, params.x, params.y, params.width, params.height);
@@ -129,7 +129,7 @@ public:
             params.display->setFont(&fonts::efontCN_12);
             params.display->setTextColor(WIN98_CAPTION_TEXT);
             params.display->setTextSize(1);
-            params.display->setCursor(params.x + 6, params.y + 6);
+            params.display->setCursor(params.x + 6, params.y + 2);
             params.display->print(params.text);
         }
     }
@@ -163,8 +163,8 @@ public:
     void drawMenuBorder(const ThemeDrawParams& params) override {
         if (!params.visible || !params.display) return;
         
-        // 绘制菜单背景
-        params.display->fillRect(params.x + 2, params.y + 2, params.width - 4, params.height - 4, WIN98_MENU_BAR);
+        // 绘制菜单背景为白色
+        params.display->fillRect(params.x + 2, params.y + 2, params.width - 4, params.height - 4, WIN98_EDIT_BACKGROUND);
         
         // 绘制菜单边框
         drawRaisedBorder(params.display, params.x, params.y, params.width, params.height);
@@ -173,28 +173,23 @@ public:
     void drawMenuItem(const MenuItemDrawParams& params) override {
         if (!params.display) return;
         
-        uint16_t bgColor = WIN98_MENU_BAR;
-        uint16_t textColor = WIN98_WINDOW_TEXT;
+        uint16_t bgColor = WIN98_EDIT_BACKGROUND;  // 默认白色背景
+        uint16_t textColor = WIN98_WINDOW_TEXT;    // 黑色文本
         
         // 如果选中，使用高亮颜色
         if (params.selected) {
-            bgColor = WIN98_MENU_HIGHLIGHT;
-            textColor = WIN98_CAPTION_TEXT;
+            bgColor = WIN98_MENU_HIGHLIGHT;        // 蓝色高亮背景
+            textColor = WIN98_CAPTION_TEXT;        // 白色文本
         }
         
-        // 绘制菜单项背景
+        // 绘制菜单项背景（无边框）
         params.display->fillRect(params.x, params.y, params.width, params.height, bgColor);
-        
-        // 如果选中，绘制选中边框
-        if (params.selected) {
-            params.display->drawRect(params.x, params.y, params.width, params.height, WIN98_WINDOW_TEXT);
-        }
         
         // 绘制菜单项文本
         params.display->setFont(&fonts::efontCN_12);
         params.display->setTextColor(textColor);
         params.display->setTextSize(1);
-        params.display->setCursor(params.x + 4, params.y + (params.height - 8) / 2);
+        params.display->setCursor(params.x + 4, params.y + (params.height - 10) / 2);
         params.display->print(params.text);
     }
     

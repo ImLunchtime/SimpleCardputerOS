@@ -375,7 +375,7 @@ public:
             }
         }
         itemCount = 0;
-        selectedIndex = 1;
+        selectedIndex = 0;
     }
     
     MenuItem* getSelectedItem() {
