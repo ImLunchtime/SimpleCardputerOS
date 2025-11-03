@@ -3,7 +3,7 @@
 #include "UIManager.h"
 #include "EventSystem.h"
 #include "AppManager.h"
-#include "img_kiwi.h"
+#include "img_picture1.h"
 
 class TestApp : public App {
 private:
@@ -13,14 +13,14 @@ private:
     enum ControlIds {
         STATUS_LABEL_ID = 2,
         INFO_LABEL_ID = 3,
-        KIWI_IMAGE_ID = 4,
+        PICTURE_IMAGE_ID = 4,
         WINDOW_ID = 5
     };
     
     // 控件引用
     UILabel* statusLabel;
     UILabel* infoLabel;
-    UIImage* kiwiImage;
+    UIImage* pictureImage;
     UIWindow* mainWindow;
     
 public:
@@ -31,8 +31,8 @@ public:
         // 创建主窗口 - 更小的窗口位于指定位置
         mainWindow = uiManager->createWindow(WINDOW_ID, 30, 20, 150, 100, "Test", "MainWindow");
         
-        // 创建kiwi图片 - 显示在窗口内 (16x16像素)
-        kiwiImage = uiManager->createImage(KIWI_IMAGE_ID, 50, 40, 16, 16, kiwi_png, kiwi_png_size, "KiwiImage");
+        // 创建图片
+        pictureImage = uiManager->createImage(PICTURE_IMAGE_ID, 50, 40, 67, 90, picture1, picture1_size, "Picture");
         
         // 创建状态标签
         statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 35, 70, "Test app ready", "Status");
