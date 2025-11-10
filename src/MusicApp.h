@@ -156,26 +156,28 @@ private:
         
         void draw(LGFX_Device* display) override {
             // 绘制滑块背景
-            display->fillRect(x, y, width, height, TFT_DARKGREY);
+            int absX = getAbsoluteX();
+            int absY = getAbsoluteY();
+            display->fillRect(absX, absY, width, height, TFT_DARKGREY);
             
             // 绘制滑块边框
             if (focused) {
-                display->drawRect(x - 1, y - 1, width + 2, height + 2, TFT_YELLOW);
+                display->drawRect(absX - 1, absY - 1, width + 2, height + 2, TFT_YELLOW);
             } else {
-                display->drawRect(x, y, width, height, TFT_WHITE);
+                display->drawRect(absX, absY, width, height, TFT_WHITE);
             }
             
             // 计算滑块位置（硬编码范围0-100）
-            int sliderPos = x + (getValue() * (width - 8)) / 100;
+            int sliderPos = absX + (getValue() * (width - 8)) / 100;
             
             // 绘制滑块指示器
-            display->fillRect(sliderPos, y + 2, 8, height - 4, TFT_WHITE);
+            display->fillRect(sliderPos, absY + 2, 8, height - 4, TFT_WHITE);
             
             // 绘制音量文本
             String volumeText = "Vol: " + String(getValue()) + "%";
             display->setFont(&fonts::efontCN_12);
             display->setTextColor(TFT_WHITE);
-            display->drawString(volumeText, x + width + 5, y + 2);
+            display->drawString(volumeText, absX + width + 5, absY + 2);
         }
     };
 

@@ -31,14 +31,14 @@ public:
         // 创建主窗口 - 更小的窗口位于指定位置
         mainWindow = uiManager->createWindow(WINDOW_ID, 30, 20, 150, 100, "Test", "MainWindow");
         
-        // 创建图片
-        pictureImage = uiManager->createImage(PICTURE_IMAGE_ID, 50, 40, 67, 90, picture1, picture1_size, "Picture");
+        // 创建图片（设置父为主窗口）
+        pictureImage = uiManager->createImage(PICTURE_IMAGE_ID, 50, 40, 67, 90, picture1, picture1_size, "Picture", mainWindow);
         
-        // 创建状态标签
-        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 35, 70, "Test app ready", "Status");
+        // 创建状态标签（设置父为主窗口）
+        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 35, 70, "Test app ready", "Status", mainWindow);
         
-        // 创建信息标签
-        infoLabel = uiManager->createLabel(INFO_LABEL_ID, 35, 85, "Press ESC to exit", "Info");
+        // 创建信息标签（设置父为主窗口）
+        infoLabel = uiManager->createLabel(INFO_LABEL_ID, 35, 85, "Press ESC to exit", "Info", mainWindow);
     }
 
     void loop() override {

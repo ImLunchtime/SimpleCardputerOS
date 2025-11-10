@@ -20,25 +20,35 @@ private:
     UIWidget* foregroundWidgets[20];  // 前景层控件（当前应用）
     int foregroundWidgetCount;
     bool hasBackgroundLayer;  // 是否有背景层
+    UIScreen* rootScreen;     // 根屏幕作为默认父对象
     
 public:
     UIManager() : display(&M5Cardputer.Display), widgetCount(0), currentFocus(-1), focusableCount(0), 
-                  backgroundWidgetCount(0), foregroundWidgetCount(0), hasBackgroundLayer(false) {
+                  backgroundWidgetCount(0), foregroundWidgetCount(0), hasBackgroundLayer(false), rootScreen(nullptr) {
         for (int i = 0; i < 20; i++) {
             widgets[i] = nullptr;
             focusableWidgets[i] = -1;
             backgroundWidgets[i] = nullptr;
             foregroundWidgets[i] = nullptr;
         }
+        // 初始化根屏幕尺寸
+        int dw = display ? display->width() : 240;
+        int dh = display ? display->height() : 135;
+        rootScreen = new UIScreen(-1000, dw, dh, "RootScreen");
     }
     
     ~UIManager() {
         clear();
+        if (rootScreen) { delete rootScreen; rootScreen = nullptr; }
     }
     
     // 控件管理
     void addWidget(UIWidget* widget) {
         if (widgetCount < 20 && widget != nullptr) {
+            // 默认父对象挂到根屏幕
+            if (widget->getParent() == nullptr) {
+                widget->setParent(rootScreen);
+            }
             widgets[widgetCount] = widget;
             
             // 如果有背景层，新控件添加到前景层
@@ -103,6 +113,8 @@ public:
         }
         return nullptr;
     }
+
+    UIScreen* getRootScreen() const { return rootScreen; }
     
     void removeWidget(int id) {
         for (int i = 0; i < widgetCount; i++) {
@@ -397,38 +409,44 @@ public:
     }
     
     // 便利方法
-    UILabel* createLabel(int id, int x, int y, const String& text, const String& name = "") {
+    UILabel* createLabel(int id, int x, int y, const String& text, const String& name = "", UIWidget* parent = nullptr) {
         UILabel* label = new UILabel(id, x, y, text, name);
+        label->setParent(parent ? parent : rootScreen);
         addWidget(label);
         return label;
     }
     
-    UIButton* createButton(int id, int x, int y, int width, int height, const String& text, const String& name = "") {
+    UIButton* createButton(int id, int x, int y, int width, int height, const String& text, const String& name = "", UIWidget* parent = nullptr) {
         UIButton* button = new UIButton(id, x, y, width, height, text, name);
+        button->setParent(parent ? parent : rootScreen);
         addWidget(button);
         return button;
     }
     
-    UIWindow* createWindow(int id, int x, int y, int width, int height, const String& title = "", const String& name = "") {
+    UIWindow* createWindow(int id, int x, int y, int width, int height, const String& title = "", const String& name = "", UIWidget* parent = nullptr) {
         UIWindow* window = new UIWindow(id, x, y, width, height, title, name);
+        window->setParent(parent ? parent : rootScreen);
         addWidget(window);
         return window;
     }
     
-    UIMenuList* createMenuList(int id, int x, int y, int width, int height, const String& name = "", int itemHeight = 16) {
+    UIMenuList* createMenuList(int id, int x, int y, int width, int height, const String& name = "", int itemHeight = 16, UIWidget* parent = nullptr) {
         UIMenuList* menu = new UIMenuList(id, x, y, width, height, name, itemHeight);
+        menu->setParent(parent ? parent : rootScreen);
         addWidget(menu);
         return menu;
     }
     
-    UIMenuGrid* createMenuGrid(int id, int x, int y, int width, int height, int columns, int rows, const String& name = "") {
+    UIMenuGrid* createMenuGrid(int id, int x, int y, int width, int height, int columns, int rows, const String& name = "", UIWidget* parent = nullptr) {
         UIMenuGrid* menu = new UIMenuGrid(id, x, y, width, height, columns, rows, name);
+        menu->setParent(parent ? parent : rootScreen);
         addWidget(menu);
         return menu;
     }
     
-    UIImage* createImage(int id, int x, int y, int width, int height, const uint8_t* imageData, size_t dataSize, const String& name = "") {
+    UIImage* createImage(int id, int x, int y, int width, int height, const uint8_t* imageData, size_t dataSize, const String& name = "", UIWidget* parent = nullptr) {
         UIImage* image = new UIImage(id, x, y, width, height, imageData, dataSize, name);
+        image->setParent(parent ? parent : rootScreen);
         addWidget(image);
         return image;
     }

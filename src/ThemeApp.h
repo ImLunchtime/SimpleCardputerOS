@@ -48,16 +48,19 @@ public:
         mainWindow = new UIWindow(1, 30, 20, 180, 100, "Theme Settings");
         uiManager->addWidget(mainWindow);
         
-        // 创建状态标签
+        // 创建状态标签（设置父为主窗口）
         statusLabel = new UILabel(2, 35, 35, "Theme Manager");
+        statusLabel->setParent(mainWindow);
         uiManager->addWidget(statusLabel);
         
-        // 创建当前主题预览标签
+        // 创建当前主题预览标签（设置父为主窗口）
         previewLabel = new UILabel(3, 35, 45, "Current: Default");
+        previewLabel->setParent(mainWindow);
         uiManager->addWidget(previewLabel);
         
-        // 创建主题菜单 - 更紧凑的尺寸
+        // 创建主题菜单 - 更紧凑的尺寸（设置父为主窗口）
         themeMenu = new ThemeMenuList(4, 35, 55, 150, 50, "ThemeMenu", 12, this);
+        themeMenu->setParent(mainWindow);
         
         // 添加主题选项
         if (globalThemeManager) {

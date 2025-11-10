@@ -53,19 +53,20 @@ public:
         mainWindow = uiManager->createWindow(WINDOW_ID, 5, 5, 150, 100, "Launcher", "MainWindow");
         
         // 创建电池信息标签 - 位于窗口右上角
-        batteryLabel = uiManager->createLabel(BATTERY_LABEL_ID, 100, 10, batteryManager.getBatteryLevelString(), "BatteryInfo");
+        batteryLabel = uiManager->createLabel(BATTERY_LABEL_ID, 100, 10, batteryManager.getBatteryLevelString(), "BatteryInfo", mainWindow);
         batteryLabel->setTextColor(TFT_GREEN);
         
         // 创建电池电压标签 - 位于电池信息标签下方
         String voltageText = String(batteryManager.getBatteryVoltage()) + "mV";
-        batteryVoltageLabel = uiManager->createLabel(BATTERY_VOLTAGE_LABEL_ID, 100, 20, voltageText, "BatteryVoltage");
+        batteryVoltageLabel = uiManager->createLabel(BATTERY_VOLTAGE_LABEL_ID, 100, 20, voltageText, "BatteryVoltage", mainWindow);
         batteryVoltageLabel->setTextColor(TFT_CYAN);
         
         // 创建状态标签
-        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 10, 25, "Select app", "Status");
+        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 10, 25, "Select app", "Status", mainWindow);
         
         // 创建网格菜单 - 3x2网格布局以显示更多应用
         gridMenu = new LauncherMenuGrid(GRID_MENU_ID, 10, 40, 140, 60, 3, 2, "AppGrid", this);
+        gridMenu->setParent(mainWindow);
         uiManager->addWidget(gridMenu);
         
         // 从应用管理器获取应用列表并添加到菜单

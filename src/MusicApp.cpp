@@ -59,30 +59,36 @@ void MusicApp::setup() {
     
     // 创建标题
     titleLabel = new UILabel(TITLE_LABEL_ID, 25, 20, "Music Player");
+    titleLabel->setParent(mainWindow);
     titleLabel->setTextColor(TFT_WHITE);
     uiManager->addWidget(titleLabel);
     
     // 创建歌曲信息标签
     songLabel = new UILabel(SONG_LABEL_ID, 25, 30, "No song loaded");
+    songLabel->setParent(mainWindow);
     songLabel->setTextColor(TFT_YELLOW);
     uiManager->addWidget(songLabel);
     
     // 创建播放列表 - 调整高度为底部UI留出空间
     playList = new MusicMenuList(PLAYLIST_ID, 25, 45, 190, 50, "playlist", 10, this);
+    playList->setParent(mainWindow);
     playList->setColors(TFT_WHITE, TFT_BLUE, TFT_WHITE, TFT_DARKGREY);
     uiManager->addWidget(playList);
     
     // 创建当前播放曲名标签 - 位于底部
     nowPlayingLabel = new UILabel(NOW_PLAYING_LABEL_ID, 25, 100, "Not Playing");
+    nowPlayingLabel->setParent(mainWindow);
     nowPlayingLabel->setTextColor(TFT_CYAN);
     uiManager->addWidget(nowPlayingLabel);
     
     // 创建音量滑块 - 位于底部
     volumeSlider = new VolumeSlider(VOLUME_SLIDER_ID, 25, 115, 120, 12, "volume");
+    volumeSlider->setParent(mainWindow);
     uiManager->addWidget(volumeSlider);
     
     // 创建状态标签 - 调整位置到右下角
     statusLabel = new UILabel(STATUS_LABEL_ID, 150, 115, "Ready");
+    statusLabel->setParent(mainWindow);
     statusLabel->setTextColor(TFT_GREEN);
     uiManager->addWidget(statusLabel);
     

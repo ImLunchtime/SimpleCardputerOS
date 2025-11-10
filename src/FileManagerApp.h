@@ -44,23 +44,27 @@ public:
         mainWindow = new UIWindow(WINDOW_ID, 0, 0, 240, 135);
         uiManager->addWidget(mainWindow);
         
-        // 创建标题标签
+        // 创建标题标签（设置父为主窗口）
         titleLabel = new UILabel(TITLE_LABEL_ID, 5, 5, "Files");
+        titleLabel->setParent(mainWindow);
         titleLabel->setTextColor(TFT_WHITE);
         uiManager->addWidget(titleLabel);
         
-        // 创建路径标签
+        // 创建路径标签（设置父为主窗口）
         pathLabel = new UILabel(PATH_LABEL_ID, 5, 20, "/");
+        pathLabel->setParent(mainWindow);
         pathLabel->setTextColor(TFT_YELLOW);
         uiManager->addWidget(pathLabel);
         
-        // 创建文件列表
+        // 创建文件列表（设置父为主窗口）
         fileList = new UIMenuList(FILE_LIST_ID, 5, 35, 230, 80);
+        fileList->setParent(mainWindow);
         fileList->setColors(TFT_WHITE, TFT_BLUE, TFT_WHITE, TFT_DARKGREY);
         uiManager->addWidget(fileList);
         
-        // 创建状态标签
+        // 创建状态标签（设置父为主窗口）
         statusLabel = new UILabel(STATUS_LABEL_ID, 5, 120, "Press ` to exit");
+        statusLabel->setParent(mainWindow);
         statusLabel->setTextColor(TFT_GREEN);
         uiManager->addWidget(statusLabel);
         

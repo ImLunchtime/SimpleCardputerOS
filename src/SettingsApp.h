@@ -42,11 +42,12 @@ public:
         // 创建主窗口 - 更小的窗口位于指定位置
         mainWindow = uiManager->createWindow(WINDOW_ID, 30, 20, 150, 100, "Settings", "MainWindow");
         
-        // 创建状态标签
-        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 35, 35, "Select a setting", "Status");
+        // 创建状态标签（设置父为主窗口）
+        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 35, 35, "Select a setting", "Status", mainWindow);
         
-        // 创建设置菜单
+        // 创建设置菜单（设置父为主窗口）
         settingsMenu = new SettingsMenuList(MENU_LIST_ID, 35, 45, 120, 40, "SettingsMenu", 10, this);
+        settingsMenu->setParent(mainWindow);
         uiManager->addWidget(settingsMenu);
         
         // 添加设置项

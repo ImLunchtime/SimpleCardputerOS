@@ -12,7 +12,8 @@ enum UIWidgetType {
     WIDGET_MENU_LIST,
     WIDGET_MENU_GRID,
     WIDGET_SLIDER,
-    WIDGET_IMAGE
+    WIDGET_IMAGE,
+    WIDGET_SCREEN
 };
 
 // UI控件基类
@@ -25,11 +26,12 @@ protected:
     bool visible;
     bool focusable;
     bool focused;
+    UIWidget* parent;
     
 public:
     UIWidget(int _id, UIWidgetType _type, int _x, int _y, int _w, int _h, const String& _name, bool _focusable = false)
         : id(_id), type(_type), x(_x), y(_y), width(_w), height(_h), name(_name), 
-          visible(true), focusable(_focusable), focused(false) {}
+          visible(true), focusable(_focusable), focused(false), parent(nullptr) {}
     
     virtual ~UIWidget() {}
     
@@ -43,12 +45,22 @@ public:
     
     void setVisible(bool _visible) { visible = _visible; }
     void setFocused(bool _focused) { focused = _focused; }
+    void setParent(UIWidget* p) { parent = p; }
+    UIWidget* getParent() const { return parent; }
     
     // 位置和大小
     void setPosition(int _x, int _y) { x = _x; y = _y; }
     void setSize(int _w, int _h) { width = _w; height = _h; }
     void getBounds(int& _x, int& _y, int& _w, int& _h) const {
         _x = x; _y = y; _w = width; _h = height;
+    }
+    int getAbsoluteX() const { return parent ? parent->getAbsoluteX() + x : x; }
+    int getAbsoluteY() const { return parent ? parent->getAbsoluteY() + y : y; }
+    void getAbsoluteBounds(int& _x, int& _y, int& _w, int& _h) const {
+        _x = getAbsoluteX();
+        _y = getAbsoluteY();
+        _w = width;
+        _h = height;
     }
     
     // 纯虚函数，子类必须实现
@@ -58,8 +70,10 @@ public:
     
     // 局部重绘支持
     virtual void clearArea(LGFX_Device* display) {
-        // 默认实现：用黑色填充控件区域
-        display->fillRect(x, y, width, height, TFT_BLACK);
+        // 默认实现：用黑色填充控件区域（使用绝对坐标）
+        int ax, ay, aw, ah;
+        getAbsoluteBounds(ax, ay, aw, ah);
+        display->fillRect(ax, ay, aw, ah, TFT_BLACK);
     }
     
     virtual void drawPartial(LGFX_Device* display) {
@@ -72,7 +86,9 @@ public:
     virtual void clearAppArea(LGFX_Device* display) {
         // 对于应用窗口，清除整个应用区域（除启动器外的区域）
         if (type == WIDGET_WINDOW) {
-            display->fillRect(x, y, width, height, TFT_BLACK);
+            int ax, ay, aw, ah;
+            getAbsoluteBounds(ax, ay, aw, ah);
+            display->fillRect(ax, ay, aw, ah, TFT_BLACK);
         } else {
             // 对于其他控件，使用标准清屏
             clearArea(display);
@@ -117,8 +133,10 @@ public:
         if (theme) {
             ThemeDrawParams params;
             params.display = display;
-            params.x = x;
-            params.y = y;
+            int absX = getAbsoluteX();
+            int absY = getAbsoluteY();
+            params.x = absX;
+            params.y = absY;
             params.width = width;
             params.height = height;
             params.visible = visible;
@@ -131,7 +149,9 @@ public:
             display->setFont(&fonts::efontCN_12);
             display->setTextColor(textColor);
             display->setTextSize(1);
-            display->setCursor(x, y);
+            int absX = getAbsoluteX();
+            int absY = getAbsoluteY();
+            display->setCursor(absX, absY);
             display->print(text);
         }
     }
@@ -172,8 +192,10 @@ public:
         if (theme) {
             ThemeDrawParams params;
             params.display = display;
-            params.x = x;
-            params.y = y;
+            int absX = getAbsoluteX();
+            int absY = getAbsoluteY();
+            params.x = absX;
+            params.y = absY;
             params.width = width;
             params.height = height;
             params.visible = visible;
@@ -186,20 +208,22 @@ public:
             theme->drawButton(params);
         } else {
             // 回退到原始绘制方式
-            display->fillRect(x, y, width, height, TFT_BLACK);
-            display->drawRect(x, y, width, height, borderColor);
+            int absX = getAbsoluteX();
+            int absY = getAbsoluteY();
+            display->fillRect(absX, absY, width, height, TFT_BLACK);
+            display->drawRect(absX, absY, width, height, borderColor);
             
             if (focused) {
-                display->drawRect(x - 1, y - 1, width + 2, height + 2, TFT_YELLOW);
-                display->drawRect(x - 2, y - 2, width + 4, height + 4, TFT_YELLOW);
+                display->drawRect(absX - 1, absY - 1, width + 2, height + 2, TFT_YELLOW);
+                display->drawRect(absX - 2, absY - 2, width + 4, height + 4, TFT_YELLOW);
             }
             
             display->setFont(&fonts::efontCN_12);
             display->setTextSize(1);
             int textWidth = text.length() * 6;
             int textHeight = 8;
-            int textX = x + (width - textWidth) / 2;
-            int textY = y + (height - textHeight) / 2;
+            int textX = absX + (width - textWidth) / 2;
+            int textY = absY + (height - textHeight) / 2;
             
             display->setTextColor(textColor);
             display->setCursor(textX, textY);
@@ -247,8 +271,10 @@ public:
         if (theme) {
             ThemeDrawParams params;
             params.display = display;
-            params.x = x;
-            params.y = y;
+            int absX = getAbsoluteX();
+            int absY = getAbsoluteY();
+            params.x = absX;
+            params.y = absY;
             params.width = width;
             params.height = height;
             params.visible = visible;
@@ -260,14 +286,16 @@ public:
             theme->drawWindow(params);
         } else {
             // 回退到原始绘制方式
-            display->fillRect(x, y, width, height, TFT_BLACK);
-            display->drawRect(x, y, width, height, borderColor);
+            int absX = getAbsoluteX();
+            int absY = getAbsoluteY();
+            display->fillRect(absX, absY, width, height, TFT_BLACK);
+            display->drawRect(absX, absY, width, height, borderColor);
             
             if (!title.isEmpty()) {
                 display->setFont(&fonts::efontCN_12);
                 display->setTextColor(TFT_WHITE);
                 display->setTextSize(1);
-                display->setCursor(x + 5, y + 3);
+                display->setCursor(absX + 5, absY + 3);
                 display->print(title);
             }
         }
@@ -299,6 +327,19 @@ public:
     bool handleKeyEvent(const KeyEvent& event) override {
         return false; // 窗口本身不处理键盘事件
     }
+};
+
+// 屏幕根容器，不可聚焦，不绘制内容，仅用于作为父对象
+class UIScreen : public UIWidget {
+public:
+    UIScreen(int id, int width, int height, const String& name = "")
+        : UIWidget(id, WIDGET_SCREEN, 0, 0, width, height, name, false) {}
+
+    void draw(LGFX_Device* display) override {
+        // 根屏幕不绘制任何东西
+    }
+
+    bool handleKeyEvent(const KeyEvent& event) override { return false; }
 };
 
 // 菜单项结构
@@ -416,8 +457,10 @@ protected:
         Theme* currentTheme = getCurrentTheme();
         if (currentTheme) {
             ThemeDrawParams params;
-            params.x = x;
-            params.y = y;
+            int absX = getAbsoluteX();
+            int absY = getAbsoluteY();
+            params.x = absX;
+            params.y = absY;
             params.width = width;
             params.height = height;
             params.focused = focused;
@@ -427,16 +470,18 @@ protected:
         } else {
             // 回退到原始绘制方法
             // 绘制背景
-            display->fillRect(x, y, width, height, TFT_BLACK);
+            int absX = getAbsoluteX();
+            int absY = getAbsoluteY();
+            display->fillRect(absX, absY, width, height, TFT_BLACK);
             
             // 绘制边框
-            display->drawRect(x, y, width, height, borderColor);
+            display->drawRect(absX, absY, width, height, borderColor);
             
             // 如果聚焦，绘制焦点框
             if (focused) {
                 uint16_t focusColor = TFT_YELLOW;  // 一级焦点使用黄色
-                display->drawRect(x - 1, y - 1, width + 2, height + 2, focusColor);
-                display->drawRect(x - 2, y - 2, width + 4, height + 4, focusColor);
+                display->drawRect(absX - 1, absY - 1, width + 2, height + 2, focusColor);
+                display->drawRect(absX - 2, absY - 2, width + 4, height + 4, focusColor);
             }
         }
     }
@@ -500,8 +545,10 @@ public:
         if (currentTheme) {
             SliderDrawParams params;
             params.display = display;
-            params.x = x;
-            params.y = y;
+            int absX = getAbsoluteX();
+            int absY = getAbsoluteY();
+            params.x = absX;
+            params.y = absY;
             params.width = width;
             params.height = height;
             params.minValue = minValue;
@@ -521,30 +568,34 @@ public:
                 display->setFont(&fonts::efontCN_12);
                 display->setTextColor(TFT_WHITE);
                 display->setTextSize(1);
-                display->setCursor(x, y - 12);
+                int absX = getAbsoluteX();
+                int absY = getAbsoluteY();
+                display->setCursor(absX, absY - 12);
                 display->print(label);
             }
             
             // 计算滑块轨道区域
-            int trackY = y + (height - 4) / 2;
+            int absX2 = getAbsoluteX();
+            int absY2 = getAbsoluteY();
+            int trackY = absY2 + (height - 4) / 2;
             int trackHeight = 4;
             
             // 绘制轨道
             uint16_t borderColor = focused ? focusColor : TFT_WHITE;
-            display->drawRect(x, trackY, width, trackHeight, borderColor);
-            display->fillRect(x + 1, trackY + 1, width - 2, trackHeight - 2, trackColor);
+            display->drawRect(absX2, trackY, width, trackHeight, borderColor);
+            display->fillRect(absX2 + 1, trackY + 1, width - 2, trackHeight - 2, trackColor);
             
             // 计算滑块位置
             int range = maxValue - minValue;
-            int thumbX = x;
+            int thumbX = absX2;
             if (range > 0) {
-                thumbX = x + ((currentValue - minValue) * (width - 8)) / range;
+                thumbX = absX2 + ((currentValue - minValue) * (width - 8)) / range;
             }
             
             // 绘制滑块
             uint16_t currentThumbColor = focused ? focusColor : thumbColor;
-            display->fillRect(thumbX, y, 8, height, currentThumbColor);
-            display->drawRect(thumbX, y, 8, height, TFT_BLACK);
+            display->fillRect(thumbX, absY2, 8, height, currentThumbColor);
+            display->drawRect(thumbX, absY2, 8, height, TFT_BLACK);
             
             // 显示数值
             if (showValue) {
@@ -553,7 +604,7 @@ public:
                 display->setTextSize(1);
                 String valueText = String(currentValue);
                 int textWidth = valueText.length() * 6;
-                display->setCursor(x + width - textWidth, y + height + 2);
+                display->setCursor(absX2 + width - textWidth, absY2 + height + 2);
                 display->print(valueText);
             }
         }
@@ -625,7 +676,9 @@ public:
         drawMenuBorder(display);
         
         // 绘制菜单项
-        int startY = y;
+        int absX = getAbsoluteX();
+        int absY = getAbsoluteY();
+        int startY = absY;
         int drawCount = min(visibleItems, itemCount - scrollOffset);
         
         for (int i = 0; i < drawCount; i++) {
@@ -640,7 +693,7 @@ public:
             if (currentTheme) {
                 MenuItemDrawParams params;
                 params.display = display;
-                params.x = x + 1;
+                params.x = absX + 1;
                 params.y = itemY;
                 params.width = width - 2;
                 params.height = itemHeight;
@@ -656,7 +709,7 @@ public:
                 // 回退到原始绘制方法
                 // 绘制选中背景
                 if (focused && itemIndex == selectedIndex) {
-                    display->fillRect(x + 1, itemY, width - 2, itemHeight, selectedColor);
+                    display->fillRect(absX + 1, itemY, width - 2, itemHeight, selectedColor);
                 }
                 
                 // 绘制文本（使用裁剪后的文本）
@@ -668,7 +721,7 @@ public:
                 display->setFont(&fonts::efontCN_12);
                 display->setTextColor(color);
                 display->setTextSize(1);
-                display->setCursor(x + 4, itemY + (itemHeight - 8) / 2);
+                display->setCursor(absX + 4, itemY + (itemHeight - 8) / 2);
                 
                 // 使用裁剪后的文本
                 String clippedText = clipText(item->text, width - 2);
@@ -741,14 +794,16 @@ public:
         drawMenuBorder(display);
         
         // 绘制网格项
+        int absX = getAbsoluteX();
+        int absY = getAbsoluteY();
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < columns; col++) {
                 int itemIndex = row * columns + col;
                 if (itemIndex >= itemCount || !items[itemIndex]) continue;
                 
                 MenuItem* item = items[itemIndex];
-                int itemX = x + 2 + col * itemWidth;
-                int itemY = y + 2 + row * itemHeight;
+                int itemX = absX + 2 + col * itemWidth;
+                int itemY = absY + 2 + row * itemHeight;
                 
                 // 使用主题系统绘制网格菜单项
                 Theme* currentTheme = getCurrentTheme();
@@ -908,12 +963,14 @@ public:
     void draw(LGFX_Device* display) override {
         if (!visible) return;
         
+        int absX = getAbsoluteX();
+        int absY = getAbsoluteY();
         if (useFile && filePath.length() > 0) {
             // 从SD卡文件绘制 - 使用简化的方法
-            display->drawPngFile(filePath.c_str(), x, y);
+            display->drawPngFile(filePath.c_str(), absX, absY);
         } else if (imageData && imageDataSize > 0) {
             // 从数组绘制
-            display->drawPng(imageData, imageDataSize, x, y, width, height, 0, 0,
+            display->drawPng(imageData, imageDataSize, absX, absY, width, height, 0, 0,
                            maintainAspectRatio ? 0 : scaleX,
                            maintainAspectRatio ? 0 : scaleY);
         }
