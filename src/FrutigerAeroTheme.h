@@ -1,6 +1,9 @@
 #pragma once
 #include "ThemeManager.h"
 #include <cmath>
+// 九宫格渲染
+#include "NinePatch.h"
+#include "windowdesign1_ninepatch.h"
 
 // Frutiger Aero主题实现 - 现代白色主题，圆角设计，天蓝色渐变
 class FrutigerAeroTheme : public Theme {
@@ -81,7 +84,13 @@ private:
         }
     }
 
+    // 九宫格资源（窗口皮肤）
+    NinePatchSet windowNP;
+    NinePatchMetrics windowMetrics;
+
 public:
+    FrutigerAeroTheme();
+
     void drawLabel(const ThemeDrawParams& params) override {
         if (!params.visible || !params.display) return;
         if (params.width <= 0 || params.height <= 0) return;
@@ -125,42 +134,27 @@ public:
     
     void drawWindow(const ThemeDrawParams& params) override {
         if (!params.visible || !params.display) return;
-        
-        // 边界检查
         if (params.width <= 0 || params.height <= 0) return;
-        
-        // 计算安全的圆角半径
-        int radius = min(CORNER_RADIUS, min(params.width/2, params.height/2));
-        
-        // 绘制窗口主体 - 白色圆角矩形
-        params.display->fillRoundRect(params.x, params.y, params.width, params.height, 
-                                    radius, AERO_WHITE);
-        
-        // 绘制窗口边框
-        params.display->drawRoundRect(params.x, params.y, params.width, params.height, 
-                                    radius, AERO_SHADOW);
-        
-        // 绘制标题栏 - 简化版本，更矮的标题栏
-        int titleBarHeight = 16;  // 从24改为16，使标题栏更矮
-        if (params.height > titleBarHeight + 4) {
-            // 绘制标题栏背景
-            params.display->fillRoundRect(params.x + 1, params.y + 1, 
-                                        params.width - 2, titleBarHeight, 
-                                        radius - 1, AERO_SKY_BLUE);
-            
-            // 简化的渐变效果 - 只绘制顶部高光
-            int highlightHeight = titleBarHeight / 3;
-            params.display->fillRect(params.x + 1, params.y + 1, 
-                                   params.width - 2, highlightHeight, 
-                                   AERO_LIGHT_BLUE);
-            
-            // 绘制标题文本 - 改为黑色文字
-            if (!params.text.isEmpty()) {
-                params.display->setTextColor(AERO_TEXT_BLACK);  // 改为黑色
-                params.display->setTextSize(1);
-                params.display->setCursor(params.x + 6, params.y + 4);  // 调整位置适应更矮的标题栏
-                params.display->print(params.text);
-            }
+
+        // 使用九宫格渲染窗口整体
+        NinePatchRenderer::drawWindow(
+            params.display,
+            windowNP,
+            params.x, params.y, params.width, params.height,
+            windowMetrics,
+            NinePatchFillMode::Tile,   // 边框平铺
+            NinePatchFillMode::Tile    // 中心平铺
+        );
+
+        // 标题文本叠加（可选）
+        if (!params.text.isEmpty()) {
+            params.display->setTextColor(AERO_TEXT_BLACK);
+            params.display->setTextSize(1);
+            // 贴近上边缘的内边距
+            int textX = params.x + 6;
+            int textY = params.y + 4;
+            params.display->setCursor(textX, textY);
+            params.display->print(params.text);
         }
     }
     
