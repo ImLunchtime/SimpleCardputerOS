@@ -44,6 +44,8 @@ public:
         mainWindow = new UIWindow(WINDOW_ID, 0, 0, 240, 135);
         uiManager->addWidget(mainWindow);
         
+        mainWindow->setChildOffset(0, 0);
+        
         // 创建标题标签（设置父为主窗口）
         titleLabel = new UILabel(TITLE_LABEL_ID, 5, 5, "Files");
         titleLabel->setParent(mainWindow);

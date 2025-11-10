@@ -57,6 +57,8 @@ void MusicApp::setup() {
     mainWindow = new UIWindow(WINDOW_ID, 20, 15, 200, 130);
     uiManager->addWidget(mainWindow);
     
+    mainWindow->setChildOffset(-16, -16);
+    
     // 创建标题
     titleLabel = new UILabel(TITLE_LABEL_ID, 25, 20, "Music Player");
     titleLabel->setParent(mainWindow);

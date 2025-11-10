@@ -47,6 +47,8 @@ public:
         // 创建主窗口 - 更小的窗口位于指定位置，参考设置App的布局
         mainWindow = new UIWindow(1, 30, 20, 180, 100, "Theme Settings");
         uiManager->addWidget(mainWindow);
+        // 矫正控件位置：当前控件整体偏右下约24px，向左上移动24px
+        mainWindow->setChildOffset(-30, -30);
         
         // 创建状态标签（设置父为主窗口）
         statusLabel = new UILabel(2, 35, 35, "Theme Manager");

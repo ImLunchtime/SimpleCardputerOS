@@ -54,8 +54,13 @@ public:
     void getBounds(int& _x, int& _y, int& _w, int& _h) const {
         _x = x; _y = y; _w = width; _h = height;
     }
-    int getAbsoluteX() const { return parent ? parent->getAbsoluteX() + x : x; }
-    int getAbsoluteY() const { return parent ? parent->getAbsoluteY() + y : y; }
+    // 父容器对子元素的偏移（默认无偏移）
+    virtual int getChildOffsetX() const { return 0; }
+    virtual int getChildOffsetY() const { return 0; }
+
+    // 绝对坐标计算：包含父容器对子元素的偏移
+    int getAbsoluteX() const { return parent ? parent->getAbsoluteX() + parent->getChildOffsetX() + x : x; }
+    int getAbsoluteY() const { return parent ? parent->getAbsoluteY() + parent->getChildOffsetY() + y : y; }
     void getAbsoluteBounds(int& _x, int& _y, int& _w, int& _h) const {
         _x = getAbsoluteX();
         _y = getAbsoluteY();
@@ -255,11 +260,18 @@ class UIWindow : public UIWidget {
 private:
     String title;
     uint16_t borderColor;
+    int childOffsetX;
+    int childOffsetY;
     
 public:
     UIWindow(int id, int x, int y, int width, int height, const String& title = "", const String& name = "")
         : UIWidget(id, WIDGET_WINDOW, x, y, width, height, name, false),
-          title(title), borderColor(TFT_WHITE) {}
+          title(title), borderColor(TFT_WHITE), childOffsetX(-6), childOffsetY(-6) {}
+
+    // 窗口对子元素应用统一偏移：默认左上角移动约6像素，可配置
+    int getChildOffsetX() const override { return childOffsetX; }
+    int getChildOffsetY() const override { return childOffsetY; }
+    void setChildOffset(int ox, int oy) { childOffsetX = ox; childOffsetY = oy; }
     
     void setTitle(const String& newTitle) { title = newTitle; }
     void setBorderColor(uint16_t color) { borderColor = color; }
