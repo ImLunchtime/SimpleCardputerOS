@@ -5,7 +5,8 @@
 #include "AppManager.h"
 #include "SDFileManager.h"
 #include <cstring>  // 为 memset 添加
-#include <vector>   // 为音乐分类添加
+#include <vector>
+#include <algorithm>
 
 // ESP8266Audio 库
 #include <AudioOutput.h>
@@ -55,6 +56,11 @@ struct MusicTrack {
     String title;
     String filePath;
     String fileName;
+};
+
+struct LyricLine {
+    uint32_t timeMs;
+    String text;
 };
 
 struct Album {
@@ -199,19 +205,19 @@ private:
     enum ControlIds {
         TITLE_LABEL_ID = 1,
         SONG_LABEL_ID = 2,
-        STATUS_LABEL_ID = 3,
+        LYRICS_CURRENT_LABEL_ID = 3,
         PLAYLIST_ID = 4,
         VOLUME_SLIDER_ID = 5,
         VOLUME_LABEL_ID = 6,
-        NOW_PLAYING_LABEL_ID = 7,
+        LYRICS_NEXT_LABEL_ID = 7,
         WINDOW_ID = 8
     };
     
     // UI 组件
     UILabel* titleLabel;
     UILabel* songLabel;
-    UILabel* statusLabel;
-    UILabel* nowPlayingLabel;  // 当前播放曲名标签
+    UILabel* lyricsCurrentLabel;
+    UILabel* lyricsNextLabel;
     MusicMenuList* playList;  // 改为自定义菜单列表
     VolumeSlider* volumeSlider;  // 音量滑块
     UIWindow* mainWindow;
@@ -245,6 +251,18 @@ private:
     // 菜单导航状态
     MenuState menuState;
 
+    std::vector<LyricLine> lyricLines;
+    bool lyricsAvailable;
+    int currentLyricIndex;
+    int lastLyricsFileIndex;
+    uint32_t playbackStartMillis;
+    uint32_t pauseStartMillis;
+    uint32_t pausedAccumulatedMillis;
+    bool lastIsPlayingFlag;
+    bool lastIsPausedFlag;
+    String lastDisplayedCurrent;
+    String lastDisplayedNext;
+
 public:
     MusicApp(EventSystem* events, AppManager* manager);
     ~MusicApp();
@@ -262,6 +280,7 @@ private:
     void playNextSong();
     void playPreviousSong();
     void updateUIFromAudioStatus();
+    void updateLyricsDisplay();
     
     // 音频任务方法
     static void audioTaskFunction(void* parameter);
@@ -286,6 +305,10 @@ private:
     void updateSongInfo();
     void cleanup();
     void drawInterface();
+    void prepareLyricsForCurrentSong();
+    void clearLyrics();
+    void loadLyricsForFile(const String& mp3Path);
+    String computeLrcPath(const String& mp3Path);
     
     // 音乐分类和菜单导航方法
     void categorizeMusic();

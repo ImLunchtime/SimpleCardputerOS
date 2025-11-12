@@ -18,6 +18,17 @@ MusicApp::MusicApp(EventSystem* events, AppManager* manager)
     menuState.currentArtist = "";
     menuState.currentAlbum = "";
     menuState.selectedIndex = 0;
+
+    lyricsAvailable = false;
+    currentLyricIndex = -1;
+    lastLyricsFileIndex = -1;
+    playbackStartMillis = 0;
+    pauseStartMillis = 0;
+    pausedAccumulatedMillis = 0;
+    lastIsPlayingFlag = false;
+    lastIsPausedFlag = false;
+    lastDisplayedCurrent = "";
+    lastDisplayedNext = "";
 }
 
 MusicApp::~MusicApp() {
@@ -77,22 +88,22 @@ void MusicApp::setup() {
     playList->setColors(TFT_WHITE, TFT_BLUE, TFT_WHITE, TFT_DARKGREY);
     uiManager->addWidget(playList);
     
-    // 创建当前播放曲名标签 - 位于底部
-    nowPlayingLabel = new UILabel(NOW_PLAYING_LABEL_ID, 25, 100, "Not Playing");
-    nowPlayingLabel->setParent(mainWindow);
-    nowPlayingLabel->setTextColor(TFT_CYAN);
-    uiManager->addWidget(nowPlayingLabel);
+    lyricsCurrentLabel = new UILabel(LYRICS_CURRENT_LABEL_ID, 25, 92, "");
+    lyricsCurrentLabel->setParent(mainWindow);
+    lyricsCurrentLabel->setTextColor(TFT_CYAN);
+    uiManager->addWidget(lyricsCurrentLabel);
+
+    lyricsNextLabel = new UILabel(LYRICS_NEXT_LABEL_ID, 25, 105, "");
+    lyricsNextLabel->setParent(mainWindow);
+    lyricsNextLabel->setTextColor(TFT_DARKGREY);
+    uiManager->addWidget(lyricsNextLabel);
     
     // 创建音量滑块 - 位于底部
     volumeSlider = new VolumeSlider(VOLUME_SLIDER_ID, 25, 115, 120, 12, "volume");
     volumeSlider->setParent(mainWindow);
     uiManager->addWidget(volumeSlider);
     
-    // 创建状态标签 - 调整位置到右下角
-    statusLabel = new UILabel(STATUS_LABEL_ID, 150, 115, "Ready");
-    statusLabel->setParent(mainWindow);
-    statusLabel->setTextColor(TFT_GREEN);
-    uiManager->addWidget(statusLabel);
+    
     
     // 设置焦点
     uiManager->nextFocus();
@@ -118,6 +129,7 @@ void MusicApp::loop() {
     
     // 更新UI显示
     updateUIFromAudioStatus();
+    updateLyricsDisplay();
 }
 
 void MusicApp::onKeyEvent(const KeyEvent& event) {
@@ -163,21 +175,21 @@ void MusicApp::initializeDualCoreAudio() {
     
     // 初始化SD卡
     if (!fileManager.initialize()) {
-        statusLabel->setText("SD card initialization failed!");
+        songLabel->setText("SD card initialization failed!");
         return;
     }
     
     // 创建命令队列
     audioCommandQueue = xQueueCreate(10, sizeof(AudioTaskCommand));
     if (!audioCommandQueue) {
-        statusLabel->setText("Failed to create audio command queue");
+        songLabel->setText("Failed to create audio command queue");
         return;
     }
     
     // 创建状态互斥锁
     audioStatusMutex = xSemaphoreCreateMutex();
     if (!audioStatusMutex) {
-        statusLabel->setText("Failed to create audio status mutex");
+        songLabel->setText("Failed to create audio status mutex");
         vQueueDelete(audioCommandQueue);
         audioCommandQueue = nullptr;
         return;
@@ -195,7 +207,7 @@ void MusicApp::initializeDualCoreAudio() {
     );
     
     if (result != pdPASS) {
-        statusLabel->setText("Failed to create audio task");
+        songLabel->setText("Failed to create audio task");
         vQueueDelete(audioCommandQueue);
         vSemaphoreDelete(audioStatusMutex);
         audioCommandQueue = nullptr;
@@ -207,7 +219,7 @@ void MusicApp::initializeDualCoreAudio() {
     M5Cardputer.Speaker.setVolume(currentVolume);
     
     isInitialized = true;
-    statusLabel->setText("Ready");
+    songLabel->setText("Ready");
 }
 
 // 发送音频命令到音频任务
@@ -272,6 +284,7 @@ void MusicApp::playNextSong() {
     vTaskDelay(pdMS_TO_TICKS(100)); // 等待停止完成
     sendAudioCommand(AUDIO_CMD_PLAY, 0, musicFiles[currentFileIndex].path.c_str());
     updateSongInfo();
+    prepareLyricsForCurrentSong();
 }
 
 void MusicApp::playPreviousSong() {
@@ -282,6 +295,7 @@ void MusicApp::playPreviousSong() {
     vTaskDelay(pdMS_TO_TICKS(100)); // 等待停止完成
     sendAudioCommand(AUDIO_CMD_PLAY, 0, musicFiles[currentFileIndex].path.c_str());
     updateSongInfo();
+    prepareLyricsForCurrentSong();
 }
 
 // 根据音频状态更新UI
@@ -295,30 +309,6 @@ void MusicApp::updateUIFromAudioStatus() {
             String info = "(" + String(audioStatus.currentFileIndex + 1) + "/" + String(musicFileCount) + ") ";
             info += String(audioStatus.currentSongName);
             songLabel->setText(info);
-        }
-        
-        // 更新当前播放曲名显示
-        if (nowPlayingLabel) {
-            if (audioStatus.isPlaying && strlen(audioStatus.currentSongName) > 0) {
-                String nowPlaying = "♪ " + String(audioStatus.currentSongName);
-                // 如果曲名太长，截断显示
-                if (nowPlaying.length() > 25) {
-                    nowPlaying = nowPlaying.substring(0, 22) + "...";
-                }
-                nowPlayingLabel->setText(nowPlaying);
-                nowPlayingLabel->setTextColor(TFT_CYAN);
-            } else if (audioStatus.isPaused) {
-                nowPlayingLabel->setText("Paused");
-                nowPlayingLabel->setTextColor(TFT_ORANGE);
-            } else {
-                nowPlayingLabel->setText("Not Playing");
-                nowPlayingLabel->setTextColor(TFT_DARKGREY);
-            }
-        }
-        
-        // 更新状态信息
-        if (audioStatus.hasError && strlen(audioStatus.errorMessage) > 0) {
-            statusLabel->setText(String(audioStatus.errorMessage));
         }
         
         xSemaphoreGive(audioStatusMutex);
@@ -613,7 +603,7 @@ void MusicApp::cleanupAudioTask() {
 void MusicApp::scanMusicFiles() {
     if (!isInitialized) return;
     
-    statusLabel->setText("Scanning for music files...");
+    songLabel->setText("Scanning for music files...");
     drawInterface();
     
     // 清理之前的数据
@@ -624,28 +614,29 @@ void MusicApp::scanMusicFiles() {
     fileManager.scanAllFiles(musicFiles, musicFileCount, MAX_MUSIC_FILES, ".mp3");
     
     if (musicFileCount > 0) {
-        statusLabel->setText("Categorizing music files...");
+        songLabel->setText("Categorizing music files...");
         drawInterface();
         
         // 分类音乐文件
         categorizeMusic();
         
-        statusLabel->setText("Found " + String(musicFileCount) + " music files");
+        songLabel->setText("Found " + String(musicFileCount) + " music files");
         currentFileIndex = 0;
         updateSongInfo();
     } else {
-        statusLabel->setText("No MP3 files found");
+        songLabel->setText("No MP3 files found");
     }
 }
 
 void MusicApp::playCurrentSong() {
     if (!isInitialized || musicFileCount == 0 || currentFileIndex < 0 || currentFileIndex >= musicFileCount) {
-        statusLabel->setText("No song selected");
+        songLabel->setText("No song selected");
         return;
     }
     
     String filePath = musicFiles[currentFileIndex].path;
     sendAudioCommand(AUDIO_CMD_PLAY, 0, filePath.c_str());
+    prepareLyricsForCurrentSong();
 }
 
 void MusicApp::playSelectedSong() {
@@ -744,6 +735,185 @@ void MusicApp::cleanup() {
 void MusicApp::drawInterface() {
     // 使用智能刷新，根据是否有前景层选择合适的刷新方式
     uiManager->smartRefresh();
+}
+
+void MusicApp::prepareLyricsForCurrentSong() {
+    clearLyrics();
+    if (musicFileCount > 0 && currentFileIndex >= 0 && currentFileIndex < musicFileCount) {
+        String mp3Path = musicFiles[currentFileIndex].path;
+        String lrcPath = computeLrcPath(mp3Path);
+        if (fileManager.exists(lrcPath)) {
+            loadLyricsForFile(mp3Path);
+        } else {
+            lyricsAvailable = false;
+            lyricsCurrentLabel->setText("Can't locate lyrics file");
+            lyricsNextLabel->setText("");
+            uiManager->refreshAppArea();
+        }
+        lastLyricsFileIndex = currentFileIndex;
+    }
+    playbackStartMillis = millis();
+    pausedAccumulatedMillis = 0;
+    lastIsPlayingFlag = true;
+    lastIsPausedFlag = false;
+    currentLyricIndex = -1;
+    lastDisplayedCurrent = "";
+    lastDisplayedNext = "";
+}
+
+void MusicApp::clearLyrics() {
+    lyricLines.clear();
+    lyricsAvailable = false;
+    currentLyricIndex = -1;
+    lastDisplayedCurrent = "";
+    lastDisplayedNext = "";
+}
+
+String MusicApp::computeLrcPath(const String& mp3Path) {
+    int dot = mp3Path.lastIndexOf('.');
+    if (dot >= 0) return mp3Path.substring(0, dot) + ".lrc";
+    return mp3Path + ".lrc";
+}
+
+void MusicApp::loadLyricsForFile(const String& mp3Path) {
+    String lrcPath = computeLrcPath(mp3Path);
+    String content = fileManager.readFile(lrcPath);
+    lyricLines.clear();
+    if (content.length() == 0) {
+        lyricsAvailable = false;
+        return;
+    }
+    int pos = 0;
+    while (pos < content.length()) {
+        int next = content.indexOf('\n', pos);
+        if (next == -1) next = content.length();
+        String line = content.substring(pos, next);
+        pos = next + 1;
+        line.replace("\r", "");
+        if (line.length() == 0) continue;
+        String rem = line;
+        std::vector<uint32_t> times;
+        bool parsedAny = false;
+        while (rem.length() > 0 && rem.charAt(0) == '[') {
+            int close = rem.indexOf(']');
+            if (close <= 0) break;
+            String tag = rem.substring(1, close);
+            int colon = tag.indexOf(':');
+            if (colon < 0) break;
+            String mmStr = tag.substring(0, colon);
+            String secStr = tag.substring(colon + 1);
+            if (mmStr.length() == 0 || secStr.length() == 0) break;
+            char c0 = mmStr.charAt(0);
+            char c1 = secStr.charAt(0);
+            if (c0 < '0' || c0 > '9' || c1 < '0' || c1 > '9') break;
+            int mm = 0;
+            int ss = 0;
+            int fracMs = 0;
+            int dotPos = secStr.indexOf('.');
+            if (dotPos >= 0) {
+                String sPart = secStr.substring(0, dotPos);
+                String fracPart = secStr.substring(dotPos + 1);
+                ss = sPart.toInt();
+                int frac = fracPart.toInt();
+                if (fracPart.length() == 2) {
+                    fracMs = frac * 10;
+                } else if (fracPart.length() == 3) {
+                    fracMs = frac;
+                } else {
+                    fracMs = 0;
+                }
+            } else {
+                ss = secStr.toInt();
+            }
+            mm = mmStr.toInt();
+            uint32_t ms = (uint32_t)mm * 60000u + (uint32_t)ss * 1000u + (uint32_t)fracMs;
+            times.push_back(ms);
+            parsedAny = true;
+            rem = rem.substring(close + 1);
+        }
+        if (!parsedAny) continue;
+        String text = rem;
+        text.trim();
+        if (text.length() == 0) continue;
+        for (size_t i = 0; i < times.size(); i++) {
+            LyricLine ll;
+            ll.timeMs = times[i];
+            ll.text = text;
+            lyricLines.push_back(ll);
+        }
+    }
+    if (!lyricLines.empty()) {
+        std::sort(lyricLines.begin(), lyricLines.end(), [](const LyricLine& a, const LyricLine& b){ return a.timeMs < b.timeMs; });
+        lyricsAvailable = true;
+    } else {
+        lyricsAvailable = false;
+    }
+}
+
+void MusicApp::updateLyricsDisplay() {
+    if (audioStatusMutex && xSemaphoreTake(audioStatusMutex, pdMS_TO_TICKS(1)) == pdTRUE) {
+        isPlaying = audioStatus.isPlaying;
+        isPaused = audioStatus.isPaused;
+        int idx = audioStatus.currentFileIndex;
+        xSemaphoreGive(audioStatusMutex);
+        if (isPlaying && idx >= 0 && idx != lastLyricsFileIndex) {
+            currentFileIndex = idx;
+            prepareLyricsForCurrentSong();
+        }
+    }
+    if (isPlaying && !lastIsPlayingFlag) {
+        playbackStartMillis = millis();
+        pausedAccumulatedMillis = 0;
+        lastIsPlayingFlag = true;
+        lastIsPausedFlag = false;
+    }
+    if (isPaused && !lastIsPausedFlag) {
+        pauseStartMillis = millis();
+        lastIsPausedFlag = true;
+    }
+    if (!isPaused && lastIsPausedFlag) {
+        pausedAccumulatedMillis += millis() - pauseStartMillis;
+        lastIsPausedFlag = false;
+    }
+    if (!isPlaying) {
+        lastIsPlayingFlag = false;
+    }
+    if (!isPlaying) return;
+    if (!lyricsAvailable) {
+        if (lastDisplayedCurrent != "Can't locate lyrics file" || lastDisplayedNext.length() > 0) {
+            lyricsCurrentLabel->setText("Can't locate lyrics file");
+            lyricsNextLabel->setText("");
+            lastDisplayedCurrent = "Can't locate lyrics file";
+            lastDisplayedNext = "";
+            uiManager->refreshAppArea();
+        }
+        return;
+    }
+    uint32_t nowMs = millis();
+    uint32_t elapsed = nowMs >= playbackStartMillis ? nowMs - playbackStartMillis : 0;
+    if (elapsed >= pausedAccumulatedMillis) {
+        elapsed -= pausedAccumulatedMillis;
+    } else {
+        elapsed = 0;
+    }
+    if (currentLyricIndex < 0) {
+        int i = 0;
+        while (i + 1 < (int)lyricLines.size() && lyricLines[i + 1].timeMs <= elapsed) i++;
+        currentLyricIndex = i;
+    } else {
+        while (currentLyricIndex + 1 < (int)lyricLines.size() && lyricLines[currentLyricIndex + 1].timeMs <= elapsed) {
+            currentLyricIndex++;
+        }
+    }
+    String cur = currentLyricIndex >= 0 && currentLyricIndex < (int)lyricLines.size() ? lyricLines[currentLyricIndex].text : "";
+    String nxt = currentLyricIndex + 1 < (int)lyricLines.size() ? lyricLines[currentLyricIndex + 1].text : "";
+    if (cur != lastDisplayedCurrent || nxt != lastDisplayedNext) {
+        lyricsCurrentLabel->setText(cur);
+        lyricsNextLabel->setText(nxt);
+        lastDisplayedCurrent = cur;
+        lastDisplayedNext = nxt;
+        uiManager->refreshAppArea();
+    }
 }
 
 // 静态回调函数

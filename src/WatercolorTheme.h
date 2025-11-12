@@ -146,15 +146,31 @@ public:
 
     void drawGridMenuItem(const GridMenuItemDrawParams& params) override {
         if (!params.display) return;
-        uint16_t bg = params.selected && params.focused ? WC_ACCENT : WC_BG;
-        uint16_t border = params.selected && params.focused ? TFT_WHITE : WC_BORDER;
-        params.display->fillRect(params.x + 1, params.y + 1, params.width - 2, params.height - 2, bg);
-        params.display->drawRect(params.x, params.y, params.width, params.height, border);
+
+        // 使用水彩按钮九宫格作为网格项背景
+        NinePatchRenderer::drawWindow(
+            params.display,
+            buttonSet,
+            params.x, params.y, params.width, params.height,
+            buttonMetrics,
+            NinePatchFillMode::Tile,
+            NinePatchFillMode::Tile);
+
+        // 选中且有焦点时，叠加高亮边框
+        if (params.focused && params.selected) {
+            params.display->drawRect(params.x - 1, params.y - 1, params.width + 2, params.height + 2, TFT_WHITE);
+        } else {
+            // 常态边框
+            params.display->drawRect(params.x, params.y, params.width, params.height, WC_BORDER);
+        }
+
+        // 文本居中绘制
         if (!params.text.isEmpty()) {
-            uint16_t txt = params.enabled ? (params.selected && params.focused ? TFT_BLACK : WC_TEXT) : TFT_DARKGREY;
+            uint16_t txt = params.enabled ? (params.focused && params.selected ? TFT_BLACK : WC_TEXT) : TFT_DARKGREY;
             int textWidth = params.text.length() * 6;
             int textX = params.x + (params.width - textWidth) / 2;
             int textY = params.y + (params.height - 8) / 2;
+            params.display->setFont(&fonts::efontCN_12);
             params.display->setTextColor(txt);
             params.display->setTextSize(1);
             params.display->setCursor(textX, textY);
