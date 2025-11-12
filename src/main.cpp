@@ -11,7 +11,7 @@
 #include "PrototypeTheme.h"
 #include "DarkTheme.h"
 #include "Windows98Theme.h"
-#include "FrutigerAeroTheme.h"
+#include "WatercolorTheme.h"
 
 // 全局对象
 EventSystem globalEventSystem;
@@ -41,7 +41,7 @@ void setup() {
     globalThemeManager->registerTheme(new PrototypeTheme());
     globalThemeManager->registerTheme(new DarkTheme());
     globalThemeManager->registerTheme(new Windows98Theme());
-    globalThemeManager->registerTheme(new FrutigerAeroTheme());
+    globalThemeManager->registerTheme(new WatercolorTheme());
     // 设置Dark主题为默认主题
     globalThemeManager->setCurrentTheme(1);
   }
