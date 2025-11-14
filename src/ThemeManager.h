@@ -13,12 +13,17 @@ struct ThemeDrawParams {
     uint16_t backgroundColor;
     uint16_t selectedColor;
     uint16_t disabledColor;
+    const uint8_t* imageData;
+    size_t imageDataSize;
+    String filePath;
+    bool useFile;
     
     ThemeDrawParams() : display(nullptr), x(0), y(0), width(0), height(0), 
                        focused(false), visible(true), text(""),
                        textColor(TFT_WHITE), borderColor(TFT_WHITE), 
                        backgroundColor(TFT_BLACK), selectedColor(TFT_YELLOW),
-                       disabledColor(TFT_DARKGREY) {}
+                       disabledColor(TFT_DARKGREY), imageData(nullptr), imageDataSize(0),
+                       filePath(""), useFile(false) {}
 };
 
 // 滑块绘制参数
@@ -67,13 +72,36 @@ struct GridMenuItemDrawParams {
     uint16_t disabledColor;
     uint16_t backgroundColor;
     uint16_t borderColor;
+    const uint8_t* imageData;
+    size_t imageDataSize;
+    String filePath;
+    bool useFile;
     
     GridMenuItemDrawParams() : display(nullptr), x(0), y(0), width(0), height(0),
                               text(""), selected(false), enabled(true), focused(false),
                               textColor(TFT_WHITE), selectedColor(TFT_YELLOW),
                               disabledColor(TFT_DARKGREY), backgroundColor(TFT_BLACK),
-                              borderColor(TFT_DARKGREY) {}
+                              borderColor(TFT_DARKGREY), imageData(nullptr), imageDataSize(0),
+                              filePath(""), useFile(false) {}
 };
+
+#include <SD.h>
+static inline bool pngGetSize(const uint8_t* data, size_t len, int& w, int& h) {
+    if (!data || len < 24) return false;
+    if (data[0] != 0x89 || data[1] != 'P' || data[2] != 'N' || data[3] != 'G') return false;
+    w = (int)((uint32_t)data[16] << 24 | (uint32_t)data[17] << 16 | (uint32_t)data[18] << 8 | (uint32_t)data[19]);
+    h = (int)((uint32_t)data[20] << 24 | (uint32_t)data[21] << 16 | (uint32_t)data[22] << 8 | (uint32_t)data[23]);
+    return true;
+}
+
+static inline bool pngFileGetSize(const String& path, int& w, int& h) {
+    File f = SD.open(path.c_str());
+    if (!f) return false;
+    uint8_t buf[24];
+    size_t n = f.read(buf, sizeof(buf));
+    f.close();
+    return pngGetSize(buf, n, w, h);
+}
 
 // 主题接口 - 所有主题都必须实现这些函数
 class Theme {

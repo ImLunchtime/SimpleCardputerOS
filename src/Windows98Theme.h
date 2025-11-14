@@ -92,24 +92,44 @@ public:
             drawRaisedBorder(params.display, params.x, params.y, params.width, params.height);
         }
         
-        // 计算文本居中位置
-        params.display->setFont(&fonts::efontCN_12);
-        params.display->setTextSize(1);
-        int textWidth = params.text.length() * 6;
-        int textHeight = 8;
-        int textX = params.x + (params.width - textWidth) / 2;
-        int textY = params.y + (params.height - textHeight) / 2;
-        
-        // 如果按钮被按下，文本稍微偏移
-        if (params.focused) {
-            textX += 1;
-            textY += 1;
+        if (params.imageData || params.useFile) {
+            int imgW = 0, imgH = 0;
+            bool ok = false;
+            if (params.imageData && params.imageDataSize > 24) ok = pngGetSize(params.imageData, params.imageDataSize, imgW, imgH);
+            else if (params.useFile && params.filePath.length() > 0) ok = pngFileGetSize(params.filePath, imgW, imgH);
+            if (ok) {
+                int maxW = params.width - 6;
+                int maxH = params.height - 6;
+                if (params.imageData) {
+                    float sx = (float)maxW / (float)imgW;
+                    float sy = (float)maxH / (float)imgH;
+                    float scale = sx < sy ? sx : sy;
+                    if (scale > 1.0f) scale = 1.0f;
+                    int dw = (int)(imgW * scale);
+                    int dh = (int)(imgH * scale);
+                    int cx = params.x + (params.width - dw) / 2;
+                    int cy = params.y + (params.height - dh) / 2;
+                    if (params.focused) { cx += 1; cy += 1; }
+                    params.display->drawPng(params.imageData, params.imageDataSize, cx, cy, dw, dh, 0, 0, scale, scale);
+                } else {
+                    int cx = params.x + (params.width - imgW) / 2;
+                    int cy = params.y + (params.height - imgH) / 2;
+                    if (params.focused) { cx += 1; cy += 1; }
+                    params.display->drawPngFile(params.filePath.c_str(), cx, cy);
+                }
+            }
+        } else {
+            params.display->setFont(&fonts::efontCN_12);
+            params.display->setTextSize(1);
+            int textWidth = params.text.length() * 6;
+            int textHeight = 8;
+            int textX = params.x + (params.width - textWidth) / 2;
+            int textY = params.y + (params.height - textHeight) / 2;
+            if (params.focused) { textX += 1; textY += 1; }
+            params.display->setTextColor(WIN98_WINDOW_TEXT);
+            params.display->setCursor(textX, textY);
+            params.display->print(params.text);
         }
-        
-        // 绘制居中文本
-        params.display->setTextColor(WIN98_WINDOW_TEXT);
-        params.display->setCursor(textX, textY);
-        params.display->print(params.text);
     }
     
     void drawWindow(const ThemeDrawParams& params) override {
@@ -221,23 +241,39 @@ public:
             drawRaisedBorder(params.display, params.x, params.y, params.width, params.height);
         }
         
-        // 绘制文本
-        if (!params.text.isEmpty()) {
-            uint16_t textColor = WIN98_WINDOW_TEXT;  // 默认黑色文本
-            if (!params.enabled) {
-                textColor = WIN98_BUTTON_SHADOW;  // 禁用时灰色文本
-            } else if (params.focused && params.selected) {
-                textColor = WIN98_CAPTION_TEXT;  // 选中时白色文本
+        if (params.imageData || params.useFile) {
+            int imgW = 0, imgH = 0;
+            bool ok = false;
+            if (params.imageData && params.imageDataSize > 24) ok = pngGetSize(params.imageData, params.imageDataSize, imgW, imgH);
+            else if (params.useFile && params.filePath.length() > 0) ok = pngFileGetSize(params.filePath, imgW, imgH);
+            if (ok) {
+                int maxW = params.width - 6;
+                int maxH = params.height - 6;
+                if (params.imageData) {
+                    float sx = (float)maxW / (float)imgW;
+                    float sy = (float)maxH / (float)imgH;
+                    float scale = sx < sy ? sx : sy;
+                    if (scale > 1.0f) scale = 1.0f;
+                    int dw = (int)(imgW * scale);
+                    int dh = (int)(imgH * scale);
+                    int cx = params.x + (params.width - dw) / 2;
+                    int cy = params.y + (params.height - dh) / 2;
+                    params.display->drawPng(params.imageData, params.imageDataSize, cx, cy, dw, dh, 0, 0, scale, scale);
+                } else {
+                    int cx = params.x + (params.width - imgW) / 2;
+                    int cy = params.y + (params.height - imgH) / 2;
+                    params.display->drawPngFile(params.filePath.c_str(), cx, cy);
+                }
             }
-            
+        } else if (!params.text.isEmpty()) {
+            uint16_t textColor = WIN98_WINDOW_TEXT;
+            if (!params.enabled) textColor = WIN98_BUTTON_SHADOW;
+            else if (params.focused && params.selected) textColor = WIN98_CAPTION_TEXT;
             params.display->setTextColor(textColor);
             params.display->setTextSize(1);
-            
-            // 计算文本居中位置
             int textWidth = params.text.length() * 6;
             int textX = params.x + (params.width - textWidth) / 2;
             int textY = params.y + (params.height - 8) / 2;
-            
             params.display->setCursor(textX, textY);
             params.display->print(params.text);
         }

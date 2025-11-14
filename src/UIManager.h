@@ -422,6 +422,22 @@ public:
         addWidget(button);
         return button;
     }
+
+    UIButton* createImageButton(int id, int x, int y, int width, int height, const uint8_t* imageData, size_t dataSize, const String& name = "", UIWidget* parent = nullptr) {
+        UIButton* button = new UIButton(id, x, y, width, height, String(""), name);
+        button->setImageData(imageData, dataSize);
+        button->setParent(parent ? parent : rootScreen);
+        addWidget(button);
+        return button;
+    }
+
+    UIButton* createImageButtonFromFile(int id, int x, int y, int width, int height, const String& filePath, const String& name = "", UIWidget* parent = nullptr) {
+        UIButton* button = new UIButton(id, x, y, width, height, String(""), name);
+        button->setImageFile(filePath);
+        button->setParent(parent ? parent : rootScreen);
+        addWidget(button);
+        return button;
+    }
     
     UIWindow* createWindow(int id, int x, int y, int width, int height, const String& title = "", const String& name = "", UIWidget* parent = nullptr) {
         UIWindow* window = new UIWindow(id, x, y, width, height, title, name);

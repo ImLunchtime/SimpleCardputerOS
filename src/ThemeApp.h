@@ -20,7 +20,6 @@ private:
     };
     
     // 控件引用
-    UILabel* statusLabel;
     UILabel* previewLabel;
     UIMenuList* themeMenu;
     UIWindow* mainWindow;
@@ -49,11 +48,6 @@ public:
         uiManager->addWidget(mainWindow);
         // 矫正控件位置：当前控件整体偏右下约24px，向左上移动24px
         mainWindow->setChildOffset(-30, -30);
-        
-        // 创建状态标签（设置父为主窗口）
-        statusLabel = new UILabel(2, 35, 35, "Theme Manager");
-        statusLabel->setParent(mainWindow);
-        uiManager->addWidget(statusLabel);
         
         // 创建当前主题预览标签（设置父为主窗口）
         previewLabel = new UILabel(3, 35, 45, "Current: Default");
@@ -119,10 +113,7 @@ private:
         UIWidget* focusedWidget = uiManager->getCurrentFocusedWidget();
         if (focusedWidget) {
             String status = "Focus: " + focusedWidget->getName();
-            // 只在不是主题选择状态时更新状态
-            if (status.indexOf("ThemeMenu") == -1) {
-                statusLabel->setText(status);
-            }
+            // deleted: statusLabel->setText(status);
         }
     }
     

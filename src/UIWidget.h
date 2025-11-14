@@ -180,15 +180,22 @@ private:
     String text;
     uint16_t borderColor;
     uint16_t textColor;
+    const uint8_t* imageData;
+    size_t imageDataSize;
+    String imageFilePath;
+    bool useFileImage;
     
 public:
     UIButton(int id, int x, int y, int width, int height, const String& text, const String& name = "")
         : UIWidget(id, WIDGET_BUTTON, x, y, width, height, name, true),
-          text(text), borderColor(TFT_BLUE), textColor(TFT_WHITE) {}
+          text(text), borderColor(TFT_BLUE), textColor(TFT_WHITE),
+          imageData(nullptr), imageDataSize(0), imageFilePath(""), useFileImage(false) {}
     
     void setText(const String& newText) { text = newText; }
     void setBorderColor(uint16_t color) { borderColor = color; }
     void setTextColor(uint16_t color) { textColor = color; }
+    void setImageData(const uint8_t* data, size_t dataSize) { imageData = data; imageDataSize = dataSize; useFileImage = false; }
+    void setImageFile(const String& file) { imageFilePath = file; useFileImage = true; }
     
     void draw(LGFX_Device* display) override {
         if (!visible) return;
@@ -205,10 +212,14 @@ public:
             params.height = height;
             params.visible = visible;
             params.focused = focused;
-            params.text = text;
+            params.text = (imageData || useFileImage) ? String("") : text;
             params.textColor = textColor;
             params.borderColor = borderColor;
             params.backgroundColor = TFT_BLACK;
+            params.imageData = imageData;
+            params.imageDataSize = imageDataSize;
+            params.filePath = imageFilePath;
+            params.useFile = useFileImage;
             
             theme->drawButton(params);
         } else {
@@ -223,16 +234,47 @@ public:
                 display->drawRect(absX - 2, absY - 2, width + 4, height + 4, TFT_YELLOW);
             }
             
-            display->setFont(&fonts::efontCN_12);
-            display->setTextSize(1);
-            int textWidth = text.length() * 6;
-            int textHeight = 8;
-            int textX = absX + (width - textWidth) / 2;
-            int textY = absY + (height - textHeight) / 2;
-            
-            display->setTextColor(textColor);
-            display->setCursor(textX, textY);
-            display->print(text);
+            if (!(imageData || useFileImage)) {
+                display->setFont(&fonts::efontCN_12);
+                display->setTextSize(1);
+                int textWidth = text.length() * 6;
+                int textHeight = 8;
+                int textX = absX + (width - textWidth) / 2;
+                int textY = absY + (height - textHeight) / 2;
+                display->setTextColor(textColor);
+                display->setCursor(textX, textY);
+                display->print(text);
+            } else {
+                int imgW = 0, imgH = 0;
+                bool ok = false;
+                if (imageData && imageDataSize > 24) {
+                    ok = pngGetSize(imageData, imageDataSize, imgW, imgH);
+                } else if (useFileImage && imageFilePath.length() > 0) {
+                    ok = pngFileGetSize(imageFilePath, imgW, imgH);
+                }
+                if (ok) {
+                    int maxW = width - 2;
+                    int maxH = height - 2;
+                    if (imageData) {
+                        float scale = 1.0f;
+                        if (imgW > 0 && imgH > 0) {
+                            float sx = (float)maxW / (float)imgW;
+                            float sy = (float)maxH / (float)imgH;
+                            scale = sx < sy ? sx : sy;
+                            if (scale > 1.0f) scale = 1.0f;
+                        }
+                        int dw = (int)(imgW * scale);
+                        int dh = (int)(imgH * scale);
+                        int cx = absX + (width - dw) / 2;
+                        int cy = absY + (height - dh) / 2;
+                        display->drawPng(imageData, imageDataSize, cx, cy, dw, dh, 0, 0, scale, scale);
+                    } else {
+                        int cx = absX + (width - imgW) / 2;
+                        int cy = absY + (height - imgH) / 2;
+                        display->drawPngFile(imageFilePath.c_str(), cx, cy);
+                    }
+                }
+            }
         }
     }
     
@@ -359,9 +401,13 @@ struct MenuItem {
     String text;
     int id;
     bool enabled;
+    const uint8_t* imageData;
+    size_t imageDataSize;
+    String imageFilePath;
+    bool useFileImage;
     
     MenuItem(const String& _text, int _id, bool _enabled = true)
-        : text(_text), id(_id), enabled(_enabled) {}
+        : text(_text), id(_id), enabled(_enabled), imageData(nullptr), imageDataSize(0), imageFilePath(""), useFileImage(false) {}
 };
 
 // 菜单基类
@@ -394,6 +440,27 @@ public:
     void addItem(const String& text, int itemId, bool enabled = true) {
         if (itemCount < 20) {
             items[itemCount] = new MenuItem(text, itemId, enabled);
+            itemCount++;
+        }
+    }
+
+    void addImageItem(const uint8_t* data, size_t dataSize, int itemId, bool enabled = true) {
+        if (itemCount < 20) {
+            MenuItem* m = new MenuItem(String(""), itemId, enabled);
+            m->imageData = data;
+            m->imageDataSize = dataSize;
+            m->useFileImage = false;
+            items[itemCount] = m;
+            itemCount++;
+        }
+    }
+
+    void addImageItemFromFile(const String& filePath, int itemId, bool enabled = true) {
+        if (itemCount < 20) {
+            MenuItem* m = new MenuItem(String(""), itemId, enabled);
+            m->imageFilePath = filePath;
+            m->useFileImage = true;
+            items[itemCount] = m;
             itemCount++;
         }
     }
@@ -826,7 +893,7 @@ public:
                     params.y = itemY;
                     params.width = itemWidth;
                     params.height = itemHeight;
-                    params.text = item->text;
+                    params.text = (item->imageData || item->useFileImage) ? String("") : item->text;
                     params.selected = (row == selectedRow && col == selectedCol);
                     params.enabled = item->enabled;
                     params.focused = focused;
@@ -835,35 +902,56 @@ public:
                     params.disabledColor = disabledColor;
                     params.backgroundColor = TFT_BLACK;
                     params.borderColor = TFT_DARKGREY;
+                    params.imageData = item->imageData;
+                    params.imageDataSize = item->imageDataSize;
+                    params.filePath = item->imageFilePath;
+                    params.useFile = item->useFileImage;
                     
                     currentTheme->drawGridMenuItem(params);
                 } else {
                     // 回退到原始绘制方法
-                    // 绘制选中背景
                     if (focused && row == selectedRow && col == selectedCol) {
                         display->fillRect(itemX, itemY, itemWidth, itemHeight, selectedColor);
                     }
-                    
-                    // 绘制边框
                     display->drawRect(itemX, itemY, itemWidth, itemHeight, TFT_DARKGREY);
-                    
-                    // 绘制文本
-                    uint16_t color = item->enabled ? textColor : disabledColor;
-                    if (focused && row == selectedRow && col == selectedCol) {
-                        color = TFT_BLACK;
+                    if (item->imageData || item->useFileImage) {
+                        int imgW = 0, imgH = 0;
+                        bool ok = false;
+                        if (item->imageData && item->imageDataSize > 24) ok = pngGetSize(item->imageData, item->imageDataSize, imgW, imgH);
+                        else if (item->useFileImage && item->imageFilePath.length() > 0) ok = pngFileGetSize(item->imageFilePath, imgW, imgH);
+                        if (ok) {
+                            int maxW = itemWidth - 4;
+                            int maxH = itemHeight - 4;
+                            if (item->imageData) {
+                                float sx = (float)maxW / (float)imgW;
+                                float sy = (float)maxH / (float)imgH;
+                                float scale = sx < sy ? sx : sy;
+                                if (scale > 1.0f) scale = 1.0f;
+                                int dw = (int)(imgW * scale);
+                                int dh = (int)(imgH * scale);
+                                int cx = itemX + (itemWidth - dw) / 2;
+                                int cy = itemY + (itemHeight - dh) / 2;
+                                display->drawPng(item->imageData, item->imageDataSize, cx, cy, dw, dh, 0, 0, scale, scale);
+                            } else {
+                                int cx = itemX + (itemWidth - imgW) / 2;
+                                int cy = itemY + (itemHeight - imgH) / 2;
+                                display->drawPngFile(item->imageFilePath.c_str(), cx, cy);
+                            }
+                        }
+                    } else {
+                        uint16_t color = item->enabled ? textColor : disabledColor;
+                        if (focused && row == selectedRow && col == selectedCol) {
+                            color = TFT_BLACK;
+                        }
+                        display->setFont(&fonts::efontCN_12);
+                        display->setTextColor(color);
+                        display->setTextSize(1);
+                        int textWidth = item->text.length() * 6;
+                        int textX = itemX + (itemWidth - textWidth) / 2;
+                        int textY = itemY + (itemHeight - 8) / 2;
+                        display->setCursor(textX, textY);
+                        display->print(item->text);
                     }
-                    
-                    display->setFont(&fonts::efontCN_12);
-                    display->setTextColor(color);
-                    display->setTextSize(1);
-                    
-                    // 计算文本居中位置
-                    int textWidth = item->text.length() * 6;
-                    int textX = itemX + (itemWidth - textWidth) / 2;
-                    int textY = itemY + (itemHeight - 8) / 2;
-                    
-                    display->setCursor(textX, textY);
-                    display->print(item->text);
                 }
             }
         }

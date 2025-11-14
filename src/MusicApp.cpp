@@ -65,13 +65,13 @@ void MusicApp::setup() {
     M5Cardputer.Speaker.config(spk_cfg);
     
     // 创建主窗口 - 扩大窗口尺寸以容纳底部UI
-    mainWindow = new UIWindow(WINDOW_ID, 20, 15, 200, 130);
+    mainWindow = new UIWindow(WINDOW_ID, 20, 15, 200, 114);
     uiManager->addWidget(mainWindow);
     
-    mainWindow->setChildOffset(-16, -16);
+    mainWindow->setChildOffset(-20, -16);
     
     // 创建标题
-    titleLabel = new UILabel(TITLE_LABEL_ID, 25, 20, "Music Player");
+    titleLabel = new UILabel(TITLE_LABEL_ID, 25, 20, "Music");
     titleLabel->setParent(mainWindow);
     titleLabel->setTextColor(TFT_WHITE);
     uiManager->addWidget(titleLabel);
@@ -88,12 +88,12 @@ void MusicApp::setup() {
     playList->setColors(TFT_WHITE, TFT_BLUE, TFT_WHITE, TFT_DARKGREY);
     uiManager->addWidget(playList);
     
-    lyricsCurrentLabel = new UILabel(LYRICS_CURRENT_LABEL_ID, 25, 92, "");
+    lyricsCurrentLabel = new UILabel(LYRICS_CURRENT_LABEL_ID, 25, 87, "");
     lyricsCurrentLabel->setParent(mainWindow);
     lyricsCurrentLabel->setTextColor(TFT_CYAN);
     uiManager->addWidget(lyricsCurrentLabel);
 
-    lyricsNextLabel = new UILabel(LYRICS_NEXT_LABEL_ID, 25, 105, "");
+    lyricsNextLabel = new UILabel(LYRICS_NEXT_LABEL_ID, 25, 100, "");
     lyricsNextLabel->setParent(mainWindow);
     lyricsNextLabel->setTextColor(TFT_DARKGREY);
     uiManager->addWidget(lyricsNextLabel);

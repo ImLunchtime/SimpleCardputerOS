@@ -52,16 +52,41 @@ public:
             params.display->drawRect(params.x - 1, params.y - 1, params.width + 2, params.height + 2, WC_ACCENT);
         }
 
-        // 文本居中
-        params.display->setFont(&fonts::efontCN_12);
-        params.display->setTextSize(1);
-        int textWidth = params.text.length() * 6;
-        int textHeight = 8;
-        int textX = params.x + (params.width - textWidth) / 2;
-        int textY = params.y + (params.height - textHeight) / 2;
-        params.display->setTextColor(WC_TEXT);
-        params.display->setCursor(textX, textY);
-        params.display->print(params.text);
+        if (params.imageData || params.useFile) {
+            int imgW = 0, imgH = 0;
+            bool ok = false;
+            if (params.imageData && params.imageDataSize > 24) ok = pngGetSize(params.imageData, params.imageDataSize, imgW, imgH);
+            else if (params.useFile && params.filePath.length() > 0) ok = pngFileGetSize(params.filePath, imgW, imgH);
+            if (ok) {
+                int maxW = params.width - 6;
+                int maxH = params.height - 6;
+                if (params.imageData) {
+                    float sx = (float)maxW / (float)imgW;
+                    float sy = (float)maxH / (float)imgH;
+                    float scale = sx < sy ? sx : sy;
+                    if (scale > 1.0f) scale = 1.0f;
+                    int dw = (int)(imgW * scale);
+                    int dh = (int)(imgH * scale);
+                    int cx = params.x + (params.width - dw) / 2;
+                    int cy = params.y + (params.height - dh) / 2;
+                    params.display->drawPng(params.imageData, params.imageDataSize, cx, cy, dw, dh, 0, 0, scale, scale);
+                } else {
+                    int cx = params.x + (params.width - imgW) / 2;
+                    int cy = params.y + (params.height - imgH) / 2;
+                    params.display->drawPngFile(params.filePath.c_str(), cx, cy);
+                }
+            }
+        } else {
+            params.display->setFont(&fonts::efontCN_12);
+            params.display->setTextSize(1);
+            int textWidth = params.text.length() * 6;
+            int textHeight = 8;
+            int textX = params.x + (params.width - textWidth) / 2;
+            int textY = params.y + (params.height - textHeight) / 2;
+            params.display->setTextColor(WC_TEXT);
+            params.display->setCursor(textX, textY);
+            params.display->print(params.text);
+        }
     }
 
     void drawWindow(const ThemeDrawParams& params) override {
@@ -81,7 +106,7 @@ public:
             params.display->setFont(&fonts::efontCN_12);
             params.display->setTextColor(TFT_WHITE);
             params.display->setTextSize(1);
-            params.display->setCursor(params.x + 8, params.y + 6);
+            params.display->setCursor(params.x + 4, params.y + 2);
             params.display->print(params.text);
         }
     }
@@ -164,8 +189,31 @@ public:
             params.display->drawRect(params.x, params.y, params.width, params.height, WC_BORDER);
         }
 
-        // 文本居中绘制
-        if (!params.text.isEmpty()) {
+        if (params.imageData || params.useFile) {
+            int imgW = 0, imgH = 0;
+            bool ok = false;
+            if (params.imageData && params.imageDataSize > 24) ok = pngGetSize(params.imageData, params.imageDataSize, imgW, imgH);
+            else if (params.useFile && params.filePath.length() > 0) ok = pngFileGetSize(params.filePath, imgW, imgH);
+            if (ok) {
+                int maxW = params.width - 6;
+                int maxH = params.height - 6;
+                if (params.imageData) {
+                    float sx = (float)maxW / (float)imgW;
+                    float sy = (float)maxH / (float)imgH;
+                    float scale = sx < sy ? sx : sy;
+                    if (scale > 1.0f) scale = 1.0f;
+                    int dw = (int)(imgW * scale);
+                    int dh = (int)(imgH * scale);
+                    int cx = params.x + (params.width - dw) / 2;
+                    int cy = params.y + (params.height - dh) / 2;
+                    params.display->drawPng(params.imageData, params.imageDataSize, cx, cy, dw, dh, 0, 0, scale, scale);
+                } else {
+                    int cx = params.x + (params.width - imgW) / 2;
+                    int cy = params.y + (params.height - imgH) / 2;
+                    params.display->drawPngFile(params.filePath.c_str(), cx, cy);
+                }
+            }
+        } else if (!params.text.isEmpty()) {
             uint16_t txt = params.enabled ? (params.focused && params.selected ? TFT_BLACK : WC_TEXT) : TFT_DARKGREY;
             int textWidth = params.text.length() * 6;
             int textX = params.x + (params.width - textWidth) / 2;

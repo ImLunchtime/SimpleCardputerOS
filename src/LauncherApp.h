@@ -4,6 +4,10 @@
 #include "EventSystem.h"
 #include "AppManager.h"
 #include "BatteryManager.h"
+#include "icon_files.h"
+#include "icon_music_sd.h"
+#include "icon_test.h"
+#include "icon_theme.h"
 
 class LauncherApp : public App {
 private:
@@ -150,10 +154,30 @@ private:
         int count;
         appManager->getAppList(appList, count);
         
-        // 添加应用到网格菜单
-        for (int i = 0; i < count && i < 4; i++) { // 最多显示4个应用（2x2网格）
-            if (appList[i]) {
-                gridMenu->addItem(appList[i]->displayName, i + 100); // 应用ID从100开始
+        // 添加应用到网格菜单（优先使用图片图标）
+        for (int i = 0; i < count && i < 4; i++) {
+            if (!appList[i]) continue;
+            String name = appList[i]->name;
+            String display = appList[i]->displayName;
+            int itemId = i + 100; // 与选择处理保持一致
+
+            bool added = false;
+            if (name == "filemanager" || display == "Files") {
+                gridMenu->addImageItem(icon_files_png, icon_files_png_size, itemId);
+                added = true;
+            } else if (name == "music" || display == "Music") {
+                gridMenu->addImageItem(icon_music_sd_png, icon_music_sd_png_size, itemId);
+                added = true;
+            } else if (name == "test" || display == "Test") {
+                gridMenu->addImageItem(icon_test_png, icon_test_png_size, itemId);
+                added = true;
+            } else if (name == "theme" || display == "Theme") {
+                gridMenu->addImageItem(icon_theme_png, icon_theme_png_size, itemId);
+                added = true;
+            }
+
+            if (!added) {
+                gridMenu->addItem(display, itemId);
             }
         }
         
