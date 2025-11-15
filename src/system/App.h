@@ -1,7 +1,7 @@
 #ifndef APP_H
 #define APP_H
 
-#include "EventSystem.h"
+#include "system/EventSystem.h"
 
 // 前向声明
 class UIManager;

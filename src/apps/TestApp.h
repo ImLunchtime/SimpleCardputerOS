@@ -1,9 +1,9 @@
 #pragma once
-#include "App.h"
-#include "UIManager.h"
-#include "EventSystem.h"
-#include "AppManager.h"
-#include "img_picture1.h"
+#include "system/App.h"
+#include "ui/UIManager.h"
+#include "system/EventSystem.h"
+#include "system/AppManager.h"
+#include "assets/img_picture1.h"
 
 class TestApp : public App {
 private:

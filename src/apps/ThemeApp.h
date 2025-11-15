@@ -1,11 +1,11 @@
 #pragma once
-#include "App.h"
-#include "UIManager.h"
-#include "EventSystem.h"
-#include "AppManager.h"
-#include "ThemeManager.h"
-#include "PrototypeTheme.h"
-#include "DarkTheme.h"
+#include "system/App.h"
+#include "ui/UIManager.h"
+#include "system/EventSystem.h"
+#include "system/AppManager.h"
+#include "themes/ThemeManager.h"
+#include "themes/PrototypeTheme.h"
+#include "themes/DarkTheme.h"
 
 class ThemeApp : public App {
 private:

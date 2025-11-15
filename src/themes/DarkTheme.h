@@ -1,65 +1,42 @@
 #pragma once
 #include "ThemeManager.h"
-#include "NinePatch.h"
-#include "watercolor_window_ninepatch.h"
-#include "watercolor_button_ninepatch.h"
 
-// 水彩主题实现
-class WatercolorTheme : public Theme {
-private:
-    NinePatchSet windowSet;
-    NinePatchMetrics windowMetrics;
-    NinePatchSet buttonSet;
-    NinePatchMetrics buttonMetrics;
-
-    static const uint16_t WC_TEXT = 0x0000;       // 黑色文本
-    static const uint16_t WC_BG    = 0xFFFF;       // 白色背景
-    static const uint16_t WC_ACCENT= 0x5CDF;       // 水彩青绿点缀
-    static const uint16_t WC_BORDER= 0x753F;       // 深色边框/标题色
-
+// 深色主题实现
+class DarkTheme : public Theme {
 public:
-    WatercolorTheme() {
-        windowSet = makeNinePatch_watercolor_window();
-        windowMetrics = NinePatchMetrics::fromSet(windowSet);
-
-        buttonSet = makeNinePatch_watercolor_button();
-        buttonMetrics = NinePatchMetrics::fromSet(buttonSet);
-    }
-
     void drawLabel(const ThemeDrawParams& params) override {
         if (!params.visible || !params.display) return;
+        
         params.display->setFont(&fonts::efontCN_12);
-        params.display->setTextColor(WC_TEXT);
+        params.display->setTextColor(TFT_LIGHTGREY);  // 使用浅灰色文本
         params.display->setTextSize(1);
         params.display->setCursor(params.x, params.y);
         params.display->print(params.text);
     }
-
+    
     void drawButton(const ThemeDrawParams& params) override {
         if (!params.visible || !params.display) return;
-
-        // 使用水彩按钮九宫格绘制
-        NinePatchRenderer::drawWindow(
-            params.display,
-            buttonSet,
-            params.x, params.y, params.width, params.height,
-            buttonMetrics,
-            NinePatchFillMode::Tile,
-            NinePatchFillMode::Tile);
-
-        // 聚焦时加一圈强调边框
+        
+        // 绘制深灰色背景
+        params.display->fillRect(params.x, params.y, params.width, params.height, TFT_DARKGREY);
+        
+        // 绘制浅灰色边框
+        params.display->drawRect(params.x, params.y, params.width, params.height, TFT_LIGHTGREY);
+        
+        // 如果聚焦，绘制蓝色外框
         if (params.focused) {
-            params.display->drawRect(params.x - 1, params.y - 1, params.width + 2, params.height + 2, WC_ACCENT);
+            params.display->drawRect(params.x - 1, params.y - 1, params.width + 2, params.height + 2, TFT_CYAN);
+            params.display->drawRect(params.x - 2, params.y - 2, params.width + 4, params.height + 4, TFT_CYAN);
         }
-
+        
         if (params.imageData || params.useFile) {
             int imgW = 0, imgH = 0;
             bool ok = false;
             if (params.imageData && params.imageDataSize > 24) ok = pngGetSize(params.imageData, params.imageDataSize, imgW, imgH);
             else if (params.useFile && params.filePath.length() > 0) ok = pngFileGetSize(params.filePath, imgW, imgH);
             if (ok) {
-                int maxW = params.width - 6;
-                int maxH = params.height - 6;
+                int maxW = params.width - 2;
+                int maxH = params.height - 2;
                 if (params.imageData) {
                     float sx = (float)maxW / (float)imgW;
                     float sy = (float)maxH / (float)imgH;
@@ -83,120 +60,152 @@ public:
             int textHeight = 8;
             int textX = params.x + (params.width - textWidth) / 2;
             int textY = params.y + (params.height - textHeight) / 2;
-            params.display->setTextColor(WC_TEXT);
+            params.display->setTextColor(TFT_WHITE);
             params.display->setCursor(textX, textY);
             params.display->print(params.text);
         }
     }
-
+    
     void drawWindow(const ThemeDrawParams& params) override {
         if (!params.visible || !params.display) return;
-
-        // 使用水彩窗口九宫格绘制窗口
-        NinePatchRenderer::drawWindow(
-            params.display,
-            windowSet,
-            params.x, params.y, params.width, params.height,
-            windowMetrics,
-            NinePatchFillMode::Tile,
-            NinePatchFillMode::Tile);
-
-        // 标题（左上内边距稍微偏移）
+        
+        // 绘制深灰色背景
+        params.display->fillRect(params.x, params.y, params.width, params.height, 0x2104);  // 深灰色
+        
+        // 绘制浅灰色边框
+        params.display->drawRect(params.x, params.y, params.width, params.height, TFT_LIGHTGREY);
+        
+        // 如果有标题，绘制标题栏
         if (!params.text.isEmpty()) {
+            // 绘制标题栏背景
+            params.display->fillRect(params.x + 1, params.y + 1, params.width - 2, 14, 0x4208);  // 稍浅的灰色
+            
             params.display->setFont(&fonts::efontCN_12);
             params.display->setTextColor(TFT_WHITE);
             params.display->setTextSize(1);
-            params.display->setCursor(params.x + 4, params.y + 2);
+            params.display->setCursor(params.x + 5, params.y + 3);
             params.display->print(params.text);
         }
     }
-
+    
     void drawSlider(const SliderDrawParams& params) override {
         if (!params.visible || !params.display) return;
-
-        // 标签在上方
+        
+        // 绘制标签
         if (!params.label.isEmpty()) {
             params.display->setFont(&fonts::efontCN_12);
-            params.display->setTextColor(WC_TEXT);
+            params.display->setTextColor(TFT_LIGHTGREY);
             params.display->setTextSize(1);
             params.display->setCursor(params.x, params.y - 12);
             params.display->print(params.label);
         }
-
-        // 水彩风轨道与滑块
+        
+        // 计算滑块轨道
         int trackY = params.y + params.height / 2 - 2;
-        params.display->fillRect(params.x, trackY, params.width, 4, WC_ACCENT);
-
+        int trackHeight = 4;
+        
+        // 绘制轨道背景
+        params.display->fillRect(params.x, trackY, params.width, trackHeight, 0x4208);  // 深灰色轨道
+        
+        // 计算滑块位置
         int thumbWidth = 8;
+        int thumbHeight = params.height;
         int range = params.maxValue - params.minValue;
         int thumbX = params.x;
         if (range > 0) {
             thumbX = params.x + ((params.currentValue - params.minValue) * (params.width - thumbWidth)) / range;
         }
-        uint16_t thumbColor = params.focused ? WC_BORDER : WC_TEXT;
-        params.display->fillRect(thumbX, params.y, thumbWidth, params.height, thumbColor);
-
+        
+        // 绘制滑块
+        uint16_t thumbColor = params.focused ? TFT_CYAN : TFT_LIGHTGREY;
+        params.display->fillRect(thumbX, params.y, thumbWidth, thumbHeight, thumbColor);
+        
+        // 显示数值
         if (params.showValue) {
             String valueStr = String(params.currentValue);
             params.display->setFont(&fonts::efontCN_12);
-            params.display->setTextColor(WC_TEXT);
+            params.display->setTextColor(TFT_LIGHTGREY);
             params.display->setTextSize(1);
             params.display->setCursor(params.x + params.width + 5, params.y + 2);
             params.display->print(valueStr);
         }
     }
-
+    
     void drawMenuBorder(const ThemeDrawParams& params) override {
         if (!params.visible || !params.display) return;
-        // 柔和背景 + 边框
-        params.display->fillRect(params.x, params.y, params.width, params.height, WC_BG);
-        params.display->drawRect(params.x, params.y, params.width, params.height, WC_BORDER);
+        
+        // 绘制菜单边框
+        params.display->drawRect(params.x, params.y, params.width, params.height, TFT_LIGHTGREY);
+        
+        // 如果聚焦，绘制焦点边框
         if (params.focused) {
-            params.display->drawRect(params.x - 1, params.y - 1, params.width + 2, params.height + 2, WC_ACCENT);
+            params.display->drawRect(params.x - 1, params.y - 1, params.width + 2, params.height + 2, TFT_CYAN);
         }
     }
-
+    
     void drawMenuItem(const MenuItemDrawParams& params) override {
         if (!params.display) return;
-        uint16_t bg = params.selected ? WC_ACCENT : WC_BG;
-        uint16_t txt = params.enabled ? WC_TEXT : TFT_DARKGREY;
-        if (params.selected) txt = TFT_BLACK;
-        params.display->fillRect(params.x, params.y, params.width, params.height, bg);
+        
+        // 绘制背景
+        uint16_t bgColor = params.selected ? TFT_CYAN : 0x2104;  // 选中时用青色，否则用深灰色
+        params.display->fillRect(params.x, params.y, params.width, params.height, bgColor);
+        
+        // 设置文本颜色
+        uint16_t textColor = TFT_LIGHTGREY;
+        if (!params.enabled) {
+            textColor = 0x4208;  // 禁用时用更深的灰色
+        } else if (params.selected) {
+            textColor = TFT_BLACK;  // 选中时使用黑色文本以便在青色背景上显示
+        }
+        
+        // 绘制文本
         params.display->setFont(&fonts::efontCN_12);
-        params.display->setTextColor(txt);
+        params.display->setTextColor(textColor);
         params.display->setTextSize(1);
         params.display->setCursor(params.x + 2, params.y + 2);
         params.display->print(params.text);
     }
-
+    
     void drawGridMenuItem(const GridMenuItemDrawParams& params) override {
         if (!params.display) return;
-
-        // 使用水彩按钮九宫格作为网格项背景
-        NinePatchRenderer::drawWindow(
-            params.display,
-            buttonSet,
-            params.x, params.y, params.width, params.height,
-            buttonMetrics,
-            NinePatchFillMode::Tile,
-            NinePatchFillMode::Tile);
-
-        // 选中且有焦点时，叠加高亮边框
+        if (params.width <= 0 || params.height <= 0) return;
+        
+        // 绘制网格项背景
+        uint16_t bgColor = 0x2104;  // 深灰色背景
+        uint16_t borderColor = 0x4208;  // 更深的灰色边框
+        
         if (params.focused && params.selected) {
-            params.display->drawRect(params.x - 1, params.y - 1, params.width + 2, params.height + 2, TFT_WHITE);
-        } else {
-            // 常态边框
-            params.display->drawRect(params.x, params.y, params.width, params.height, WC_BORDER);
+            // 选中状态：青色背景
+            bgColor = TFT_CYAN;
+            borderColor = TFT_WHITE;
+        } else if (!params.enabled) {
+            // 禁用状态：更深的灰色
+            bgColor = 0x1082;
+            borderColor = 0x2104;
         }
-
+        
+        // 绘制背景
+        params.display->fillRect(params.x + 1, params.y + 1, 
+                               params.width - 2, params.height - 2, bgColor);
+        
+        // 绘制边框
+        params.display->drawRect(params.x, params.y, 
+                               params.width, params.height, borderColor);
+        
+        // 如果选中且有焦点，绘制额外的高亮边框
+        if (params.focused && params.selected) {
+            params.display->drawRect(params.x - 1, params.y - 1, 
+                                   params.width + 2, params.height + 2, TFT_WHITE);
+        }
+        
         if (params.imageData || params.useFile) {
             int imgW = 0, imgH = 0;
             bool ok = false;
             if (params.imageData && params.imageDataSize > 24) ok = pngGetSize(params.imageData, params.imageDataSize, imgW, imgH);
             else if (params.useFile && params.filePath.length() > 0) ok = pngFileGetSize(params.filePath, imgW, imgH);
             if (ok) {
-                int maxW = params.width - 6;
-                int maxH = params.height - 6;
+                int maxW = params.width - 4;
+                int maxH = params.height - 4;
                 if (params.imageData) {
                     float sx = (float)maxW / (float)imgW;
                     float sy = (float)maxH / (float)imgH;
@@ -214,24 +223,36 @@ public:
                 }
             }
         } else if (!params.text.isEmpty()) {
-            uint16_t txt = params.enabled ? (params.focused && params.selected ? TFT_BLACK : WC_TEXT) : TFT_DARKGREY;
+            uint16_t textColor = TFT_LIGHTGREY;
+            if (!params.enabled) {
+                textColor = 0x4208;
+            } else if (params.focused && params.selected) {
+                textColor = TFT_BLACK;
+            }
+            params.display->setTextColor(textColor);
+            params.display->setTextSize(1);
             int textWidth = params.text.length() * 6;
             int textX = params.x + (params.width - textWidth) / 2;
             int textY = params.y + (params.height - 8) / 2;
-            params.display->setFont(&fonts::efontCN_12);
-            params.display->setTextColor(txt);
-            params.display->setTextSize(1);
             params.display->setCursor(textX, textY);
             params.display->print(params.text);
         }
     }
-
+    
     void clearArea(LGFX_Device* display, int x, int y, int width, int height) override {
         if (display) {
-            display->fillRect(x, y, width, height, WC_BG);
+            display->fillRect(x, y, width, height, TFT_BLACK);
         }
     }
-
-    String getThemeName() const override { return "Watercolor"; }
-    String getThemeDescription() const override { return "Soft watercolor UI with nine-patch windows"; }
+    
+    String getThemeName() const override {
+        return "Dark";
+    }
+    
+    String getThemeDescription() const override {
+        return "Dark theme with grey tones and cyan accents";
+    }
 };
+
+// 全局深色主题实例
+extern DarkTheme darkTheme;

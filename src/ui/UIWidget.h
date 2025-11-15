@@ -1,8 +1,8 @@
 #pragma once
 #include <M5Cardputer.h>
 #include <SD.h>
-#include "EventSystem.h"
-#include "ThemeManager.h"
+#include "system/EventSystem.h"
+#include "themes/ThemeManager.h"
 
 // UI控件类型枚举
 enum UIWidgetType {

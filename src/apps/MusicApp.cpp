@@ -1,4 +1,4 @@
-#include "MusicApp.h"
+#include "apps/MusicApp.h"
 
 MusicApp::MusicApp(EventSystem* events, AppManager* manager) 
     : eventSystem(events), appManager(manager), 

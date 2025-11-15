@@ -1,5 +1,5 @@
 #pragma once
-#include "NinePatch.h"
+#include "ui/NinePatch.h"
 
 // 由 ninepatch_gui.py 生成的9-Patch数据
 // 原始前缀: watercolor_button

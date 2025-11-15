@@ -1,8 +1,8 @@
 #pragma once
-#include "App.h"
-#include "UIManager.h"
-#include "EventSystem.h"
-#include "AppManager.h"
+#include "system/App.h"
+#include "ui/UIManager.h"
+#include "system/EventSystem.h"
+#include "system/AppManager.h"
 
 class SettingsApp : public App {
 private:

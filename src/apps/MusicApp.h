@@ -1,9 +1,9 @@
 #pragma once
-#include "App.h"
-#include "UIManager.h"
-#include "EventSystem.h"
-#include "AppManager.h"
-#include "SDFileManager.h"
+#include "system/App.h"
+#include "ui/UIManager.h"
+#include "system/EventSystem.h"
+#include "system/AppManager.h"
+#include "system/SDFileManager.h"
 #include <cstring>  // 为 memset 添加
 #include <vector>
 #include <algorithm>

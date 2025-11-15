@@ -1,8 +1,8 @@
 #pragma once
 #include <M5Cardputer.h>
-#include "App.h"
-#include "EventSystem.h"
-#include "UIManager.h"
+#include "system/App.h"
+#include "system/EventSystem.h"
+#include "ui/UIManager.h"
 
 // 应用信息结构
 struct AppInfo {

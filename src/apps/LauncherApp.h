@@ -1,13 +1,13 @@
 #pragma once
-#include "App.h"
-#include "UIManager.h"
-#include "EventSystem.h"
-#include "AppManager.h"
-#include "BatteryManager.h"
-#include "icon_files.h"
-#include "icon_music_sd.h"
-#include "icon_test.h"
-#include "icon_theme.h"
+#include "system/App.h"
+#include "ui/UIManager.h"
+#include "system/EventSystem.h"
+#include "system/AppManager.h"
+#include "system/BatteryManager.h"
+#include "assets/icon_files.h"
+#include "assets/icon_music_sd.h"
+#include "assets/icon_test.h"
+#include "assets/icon_theme.h"
 
 class LauncherApp : public App {
 private:
@@ -69,7 +69,7 @@ public:
         statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 10, 25, "Select app", "Status", mainWindow);
         
         // 创建网格菜单 - 3x2网格布局以显示更多应用
-        gridMenu = new LauncherMenuGrid(GRID_MENU_ID, 10, 40, 140, 60, 3, 2, "AppGrid", this);
+        gridMenu = new LauncherMenuGrid(GRID_MENU_ID, 10, 40, 140, 60, 4, 2, "AppGrid", this);
         gridMenu->setParent(mainWindow);
         uiManager->addWidget(gridMenu);
         
