@@ -145,7 +145,7 @@ class MusicApp : public App {
 private:
     EventSystem* eventSystem;
     AppManager* appManager;
-    SDFileManager fileManager;
+    
     
     // 双核心音频系统组件
     TaskHandle_t audioTaskHandle;

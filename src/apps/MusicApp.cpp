@@ -173,9 +173,9 @@ void MusicApp::initializeDualCoreAudio() {
     // 清理之前的资源
     cleanup();
     
-    // 初始化SD卡
-    if (!fileManager.initialize()) {
-        songLabel->setText("SD card initialization failed!");
+    SDFileManager* fm = appManager->getSDFileManager();
+    if (!fm || !fm->isInitialized()) {
+        songLabel->setText("SD card not ready!");
         return;
     }
     
@@ -611,7 +611,10 @@ void MusicApp::scanMusicFiles() {
     
     // 扫描所有MP3文件
     musicFileCount = 0;
-    fileManager.scanAllFiles(musicFiles, musicFileCount, MAX_MUSIC_FILES, ".mp3");
+    {
+        SDFileManager* fm = appManager->getSDFileManager();
+        if (fm) fm->scanAllFiles(musicFiles, musicFileCount, MAX_MUSIC_FILES, ".mp3");
+    }
     
     if (musicFileCount > 0) {
         songLabel->setText("Categorizing music files...");
@@ -742,7 +745,8 @@ void MusicApp::prepareLyricsForCurrentSong() {
     if (musicFileCount > 0 && currentFileIndex >= 0 && currentFileIndex < musicFileCount) {
         String mp3Path = musicFiles[currentFileIndex].path;
         String lrcPath = computeLrcPath(mp3Path);
-        if (fileManager.exists(lrcPath)) {
+        SDFileManager* fm = appManager->getSDFileManager();
+        if (fm && fm->exists(lrcPath)) {
             loadLyricsForFile(mp3Path);
         } else {
             lyricsAvailable = false;
@@ -777,7 +781,8 @@ String MusicApp::computeLrcPath(const String& mp3Path) {
 
 void MusicApp::loadLyricsForFile(const String& mp3Path) {
     String lrcPath = computeLrcPath(mp3Path);
-    String content = fileManager.readFile(lrcPath);
+    SDFileManager* fm = appManager->getSDFileManager();
+    String content = fm ? fm->readFile(lrcPath) : "";
     lyricLines.clear();
     if (content.length() == 0) {
         lyricsAvailable = false;

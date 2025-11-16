@@ -3,6 +3,7 @@
 #include "system/App.h"
 #include "system/EventSystem.h"
 #include "ui/UIManager.h"
+#include "system/SDFileManager.h"
 
 // 应用信息结构
 struct AppInfo {
@@ -22,24 +23,34 @@ private:
     App* currentApp;
     App* launcherApp;
     EventSystem* eventSystem;
-    UIManager* globalUIManager;  // 全局UI管理器
+    UIManager* globalUIManager;
+    SDFileManager* globalSDManager;
     
 public:
     AppManager(EventSystem* events) : appCount(0), currentApp(nullptr), launcherApp(nullptr), eventSystem(events) {
         for (int i = 0; i < 10; i++) {
             apps[i] = nullptr;
         }
-        globalUIManager = new UIManager();  // 创建全局UI管理器
+        globalUIManager = new UIManager();
+        globalSDManager = new SDFileManager();
     }
     
     ~AppManager() {
         clear();
         delete globalUIManager;
+        delete globalSDManager;
     }
     
-    // 获取全局UI管理器
     UIManager* getUIManager() {
         return globalUIManager;
+    }
+
+    SDFileManager* getSDFileManager() {
+        return globalSDManager;
+    }
+
+    bool initializeSD() {
+        return globalSDManager ? globalSDManager->initialize() : false;
     }
     
     // 注册应用

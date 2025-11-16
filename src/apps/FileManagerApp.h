@@ -9,7 +9,6 @@ class FileManagerApp : public App {
 private:
     EventSystem* eventSystem;
     AppManager* appManager;
-    SDFileManager fileManager;
     
     // UI控件ID
     enum ControlIds {
@@ -107,7 +106,8 @@ private:
         statusLabel->setText("Initializing SD card...");
         drawInterface();
         
-        sdInitialized = fileManager.initialize();
+        SDFileManager* fm = appManager->getSDFileManager();
+        sdInitialized = (fm && fm->isInitialized());
         
         if (sdInitialized) {
             statusLabel->setText("SD card ready. Use arrows to navigate, Enter to select");
@@ -121,16 +121,17 @@ private:
         fileList->clear();
         fileCount = 0;
         
-        if (!fileManager.isInitialized()) {
+        SDFileManager* fm = appManager->getSDFileManager();
+        if (!fm || !fm->isInitialized()) {
             statusLabel->setText("SD card not initialized");
             return;
         }
         
-        String currentPath = fileManager.getCurrentPath();
+        String currentPath = fm->getCurrentPath();
         pathLabel->setText("Path: " + currentPath);
         
         // 获取文件列表
-        bool success = fileManager.listCurrentDirectory(files, fileCount, MAX_FILES);
+        bool success = fm->listCurrentDirectory(files, fileCount, MAX_FILES);
         
         if (!success) {
             statusLabel->setText("Failed to read directory: " + currentPath);
@@ -155,7 +156,7 @@ private:
                 }
             } else {
                 displayName = files[i].name;
-                if (fileManager.isAudioFile(files[i].name)) {
+                if (fm->isAudioFile(files[i].name)) {
                     displayName = "♪ " + displayName;
                 }
             }
@@ -167,7 +168,8 @@ private:
     }
     
     void handleFileSelection() {
-        if (!fileManager.isInitialized()) {
+        SDFileManager* fm = appManager->getSDFileManager();
+        if (!fm || !fm->isInitialized()) {
             statusLabel->setText("SD card not initialized");
             return;
         }
@@ -187,10 +189,10 @@ private:
         FileInfo& selectedFile = files[selectedIndex];
         
         if (selectedFile.isDirectory) {
-            bool success = fileManager.enterDirectory(selectedFile.name);
+            bool success = fm->enterDirectory(selectedFile.name);
             
             if (success) {
-                String newPath = fileManager.getCurrentPath();
+                String newPath = fm->getCurrentPath();
                 statusLabel->setText("Entered: " + newPath);
                 refreshFileList();
             } else {

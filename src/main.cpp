@@ -36,6 +36,8 @@ void setup() {
   M5Cardputer.Display.setRotation(1);
   M5Cardputer.Display.setTextSize(1);
   
+  globalAppManager.initializeSD();
+  
   // 初始化主题系统并设置默认主题
   if (globalThemeManager) {
     globalThemeManager->registerTheme(new PrototypeTheme());
