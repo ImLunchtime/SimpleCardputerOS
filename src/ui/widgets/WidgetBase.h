@@ -22,10 +22,17 @@ protected:
     bool focusable;
     bool focused;
     UIWidget* parent;
+    bool dirty;
+    bool hasLastDrawBounds;
+    int lastDrawX;
+    int lastDrawY;
+    int lastDrawW;
+    int lastDrawH;
 public:
     UIWidget(int _id, UIWidgetType _type, int _x, int _y, int _w, int _h, const String& _name, bool _focusable = false)
         : id(_id), type(_type), x(_x), y(_y), width(_w), height(_h), name(_name),
-          visible(true), focusable(_focusable), focused(false), parent(nullptr) {}
+          visible(true), focusable(_focusable), focused(false), parent(nullptr),
+          dirty(true), hasLastDrawBounds(false), lastDrawX(0), lastDrawY(0), lastDrawW(0), lastDrawH(0) {}
     virtual ~UIWidget() {}
     int getId() const { return id; }
     UIWidgetType getType() const { return type; }
@@ -33,12 +40,12 @@ public:
     bool isVisible() const { return visible; }
     bool isFocusable() const { return focusable; }
     bool isFocused() const { return focused; }
-    void setVisible(bool _visible) { visible = _visible; }
-    void setFocused(bool _focused) { focused = _focused; }
+    void setVisible(bool _visible) { if (visible != _visible) { visible = _visible; invalidate(); } }
+    void setFocused(bool _focused) { if (focused != _focused) { focused = _focused; invalidate(); } }
     void setParent(UIWidget* p) { parent = p; }
     UIWidget* getParent() const { return parent; }
-    void setPosition(int _x, int _y) { x = _x; y = _y; }
-    void setSize(int _w, int _h) { width = _w; height = _h; }
+    void setPosition(int _x, int _y) { if (x != _x || y != _y) { x = _x; y = _y; invalidate(); } }
+    void setSize(int _w, int _h) { if (width != _w || height != _h) { width = _w; height = _h; invalidate(); } }
     void getBounds(int& _x, int& _y, int& _w, int& _h) const {
         _x = x; _y = y; _w = width; _h = height;
     }
@@ -52,9 +59,36 @@ public:
         _w = width;
         _h = height;
     }
+    bool isDirty() const { return dirty; }
+    void invalidate() { dirty = true; }
+    void markDrawn() {
+        dirty = false;
+        hasLastDrawBounds = true;
+        getAbsoluteBounds(lastDrawX, lastDrawY, lastDrawW, lastDrawH);
+    }
+    void getDirtyBounds(int& outX, int& outY, int& outW, int& outH) const {
+        int cx, cy, cw, ch;
+        getAbsoluteBounds(cx, cy, cw, ch);
+        if (!hasLastDrawBounds) {
+            outX = cx;
+            outY = cy;
+            outW = cw;
+            outH = ch;
+            return;
+        }
+        int nx = min(cx, lastDrawX);
+        int ny = min(cy, lastDrawY);
+        int rx = max(cx + cw, lastDrawX + lastDrawW);
+        int by = max(cy + ch, lastDrawY + lastDrawH);
+        outX = nx;
+        outY = ny;
+        outW = rx - nx;
+        outH = by - ny;
+    }
     virtual void draw(LGFX_Device* display) = 0;
     virtual bool handleKeyEvent(const KeyEvent& event) = 0;
     virtual void onFocusChanged(bool hasFocus) {}
+    virtual bool update(uint32_t nowMs) { return false; }
     virtual void clearArea(LGFX_Device* display) {
         int ax, ay, aw, ah;
         getAbsoluteBounds(ax, ay, aw, ah);

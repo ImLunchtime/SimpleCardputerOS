@@ -39,6 +39,7 @@ public:
         if (itemCount < 20) {
             items[itemCount] = new MenuItem(text, itemId, enabled);
             itemCount++;
+            invalidate();
         }
     }
     void addImageItem(const uint8_t* data, size_t dataSize, int itemId, bool enabled = true) {
@@ -49,6 +50,7 @@ public:
             m->useFileImage = false;
             items[itemCount] = m;
             itemCount++;
+            invalidate();
         }
     }
     void addImageItemFromFile(const String& filePath, int itemId, bool enabled = true) {
@@ -58,6 +60,7 @@ public:
             m->useFileImage = true;
             items[itemCount] = m;
             itemCount++;
+            invalidate();
         }
     }
     void removeItem(int itemId) {
@@ -74,6 +77,7 @@ public:
                 } else if (itemCount == 0) {
                     selectedIndex = 0;
                 }
+                invalidate();
                 break;
             }
         }
@@ -87,6 +91,7 @@ public:
         }
         itemCount = 0;
         selectedIndex = 0;
+        invalidate();
     }
     MenuItem* getSelectedItem() {
         if (selectedIndex >= 0 && selectedIndex < itemCount && items[selectedIndex]) {
@@ -95,10 +100,12 @@ public:
         return nullptr;
     }
     void setColors(uint16_t border, uint16_t selected, uint16_t text, uint16_t disabled) {
+        if (borderColor == border && selectedColor == selected && textColor == text && disabledColor == disabled) return;
         borderColor = border;
         selectedColor = selected;
         textColor = text;
         disabledColor = disabled;
+        invalidate();
     }
     bool hasSecondaryFocus() const override { return focused; }
     void onFocusChanged(bool hasFocus) override {}
@@ -128,8 +135,8 @@ protected:
             display->drawRect(absX, absY, width, height, borderColor);
             if (focused) {
                 uint16_t focusColor = TFT_YELLOW;
-                display->drawRect(absX - 1, absY - 1, width + 2, height + 2, focusColor);
-                display->drawRect(absX - 2, absY - 2, width + 4, height + 4, focusColor);
+                if (width > 2 && height > 2) display->drawRect(absX + 1, absY + 1, width - 2, height - 2, focusColor);
+                if (width > 4 && height > 4) display->drawRect(absX + 2, absY + 2, width - 4, height - 4, focusColor);
             }
         }
     }

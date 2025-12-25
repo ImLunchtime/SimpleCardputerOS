@@ -50,16 +50,14 @@ public:
     }
     void drawPartial(LGFX_Device* display) override {
         if (!visible) return;
-        clearArea(display);
         draw(display);
     }
     void clearAppArea(LGFX_Device* display) override {
         if (!visible) return;
-        display->fillRect(x, y, width, height, TFT_BLACK);
+        return;
     }
     void drawAppPartial(LGFX_Device* display) override {
         if (!visible) return;
-        clearAppArea(display);
         draw(display);
     }
     bool handleKeyEvent(const KeyEvent& event) override {

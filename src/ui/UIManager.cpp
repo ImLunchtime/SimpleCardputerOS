@@ -1,15 +1,195 @@
 #include "UIManager.h"
 
+static bool rectIntersects(int ax, int ay, int aw, int ah, int bx, int by, int bw, int bh) {
+    if (aw <= 0 || ah <= 0 || bw <= 0 || bh <= 0) return false;
+    int ar = ax + aw;
+    int ab = ay + ah;
+    int br = bx + bw;
+    int bb = by + bh;
+    return !(ar <= bx || br <= ax || ab <= by || bb <= ay);
+}
+
+static bool intersectRects(int ax, int ay, int aw, int ah, int bx, int by, int bw, int bh, int& outX, int& outY, int& outW, int& outH) {
+    int nx = max(ax, bx);
+    int ny = max(ay, by);
+    int rx = min(ax + aw, bx + bw);
+    int by2 = min(ay + ah, by + bh);
+    int nw = rx - nx;
+    int nh = by2 - ny;
+    if (nw <= 0 || nh <= 0) return false;
+    outX = nx;
+    outY = ny;
+    outW = nw;
+    outH = nh;
+    return true;
+}
+
+bool UIManager::computeClipRect(UIWidget* widget, int& outX, int& outY, int& outW, int& outH) {
+    if (!widget) return false;
+    int ax, ay, aw, ah;
+    widget->getAbsoluteBounds(ax, ay, aw, ah);
+    int cx = ax;
+    int cy = ay;
+    int cw = aw;
+    int ch = ah;
+    UIWidget* p = widget->getParent();
+    while (p) {
+        int px, py, pw, ph;
+        p->getAbsoluteBounds(px, py, pw, ph);
+        int nx = max(cx, px);
+        int ny = max(cy, py);
+        int rx = min(cx + cw, px + pw);
+        int by = min(cy + ch, py + ph);
+        int nw = rx - nx;
+        int nh = by - ny;
+        if (nw <= 0 || nh <= 0) return false;
+        cx = nx;
+        cy = ny;
+        cw = nw;
+        ch = nh;
+        p = p->getParent();
+    }
+    outX = cx;
+    outY = cy;
+    outW = cw;
+    outH = ch;
+    return true;
+}
+
+void UIManager::drawWidgetClipped(UIWidget* widget, bool partial) {
+    if (!display || !widget) return;
+    int cx, cy, cw, ch;
+    if (!computeClipRect(widget, cx, cy, cw, ch)) return;
+    display->setClipRect(cx, cy, cw, ch);
+    if (partial) widget->drawPartial(display);
+    else widget->draw(display);
+    display->clearClipRect();
+    widget->markDrawn();
+}
+
+void UIManager::drawWidgetClippedWithExtra(UIWidget* widget, bool partial, int clipX, int clipY, int clipW, int clipH) {
+    if (!display || !widget) return;
+    int wx, wy, ww, wh;
+    if (!computeClipRect(widget, wx, wy, ww, wh)) return;
+    int cx, cy, cw, ch;
+    if (!intersectRects(wx, wy, ww, wh, clipX, clipY, clipW, clipH, cx, cy, cw, ch)) return;
+    display->setClipRect(cx, cy, cw, ch);
+    if (partial) widget->drawPartial(display);
+    else widget->draw(display);
+    display->clearClipRect();
+    widget->markDrawn();
+}
+
+bool UIManager::flushDirtyInAppArea() {
+    if (!hasBackgroundLayer || foregroundWidgetCount <= 0) return false;
+
+    int dirtyX = 0, dirtyY = 0, dirtyW = 0, dirtyH = 0;
+    bool hasDirty = false;
+    for (int i = 0; i < foregroundWidgetCount; i++) {
+        UIWidget* w = foregroundWidgets[i];
+        if (!w || !w->isVisible() || !w->isDirty()) continue;
+        int x, y, ww, hh;
+        w->getDirtyBounds(x, y, ww, hh);
+        if (!hasDirty) {
+            dirtyX = x; dirtyY = y; dirtyW = ww; dirtyH = hh;
+            hasDirty = true;
+        } else {
+            int nx = min(dirtyX, x);
+            int ny = min(dirtyY, y);
+            int rx = max(dirtyX + dirtyW, x + ww);
+            int by = max(dirtyY + dirtyH, y + hh);
+            dirtyX = nx;
+            dirtyY = ny;
+            dirtyW = rx - nx;
+            dirtyH = by - ny;
+        }
+    }
+    if (!hasDirty) return false;
+
+    UIWindow* appWindow = nullptr;
+    for (int i = 0; i < foregroundWidgetCount; i++) {
+        if (foregroundWidgets[i] && foregroundWidgets[i]->getType() == WIDGET_WINDOW) {
+            appWindow = static_cast<UIWindow*>(foregroundWidgets[i]);
+            break;
+        }
+    }
+    if (appWindow && appWindow->isVisible()) {
+        drawWidgetClippedWithExtra(appWindow, false, dirtyX, dirtyY, dirtyW, dirtyH);
+    }
+
+    for (int i = 0; i < foregroundWidgetCount; i++) {
+        UIWidget* w = foregroundWidgets[i];
+        if (!w || !w->isVisible() || w == appWindow) continue;
+        int wx, wy, ww, wh;
+        w->getDirtyBounds(wx, wy, ww, wh);
+        if (!rectIntersects(wx, wy, ww, wh, dirtyX, dirtyY, dirtyW, dirtyH)) continue;
+        drawWidgetClippedWithExtra(w, false, dirtyX, dirtyY, dirtyW, dirtyH);
+    }
+
+    for (int i = 0; i < foregroundWidgetCount; i++) {
+        UIWidget* w = foregroundWidgets[i];
+        if (w && w->isDirty()) {
+            w->markDrawn();
+        }
+    }
+    return true;
+}
+
+bool UIManager::flushDirtyInRoot() {
+    if (hasBackgroundLayer) return false;
+    int dirtyX = 0, dirtyY = 0, dirtyW = 0, dirtyH = 0;
+    bool hasDirty = false;
+    for (int i = 0; i < widgetCount; i++) {
+        UIWidget* w = widgets[i];
+        if (!w || !w->isVisible() || !w->isDirty()) continue;
+        int x, y, ww, hh;
+        w->getDirtyBounds(x, y, ww, hh);
+        if (!hasDirty) {
+            dirtyX = x; dirtyY = y; dirtyW = ww; dirtyH = hh;
+            hasDirty = true;
+        } else {
+            int nx = min(dirtyX, x);
+            int ny = min(dirtyY, y);
+            int rx = max(dirtyX + dirtyW, x + ww);
+            int by = max(dirtyY + dirtyH, y + hh);
+            dirtyX = nx;
+            dirtyY = ny;
+            dirtyW = rx - nx;
+            dirtyH = by - ny;
+        }
+    }
+    if (!hasDirty) return false;
+
+    for (int i = 0; i < widgetCount; i++) {
+        UIWidget* w = widgets[i];
+        if (!w || !w->isVisible()) continue;
+        int wx, wy, ww, wh;
+        w->getDirtyBounds(wx, wy, ww, wh);
+        if (!rectIntersects(wx, wy, ww, wh, dirtyX, dirtyY, dirtyW, dirtyH)) continue;
+        drawWidgetClippedWithExtra(w, false, dirtyX, dirtyY, dirtyW, dirtyH);
+    }
+
+    for (int i = 0; i < widgetCount; i++) {
+        UIWidget* w = widgets[i];
+        if (w && w->isDirty()) {
+            w->markDrawn();
+        }
+    }
+    return true;
+}
+
 UIManager::UIManager() : display(&M5Cardputer.Display), widgetCount(0), currentFocus(-1), focusableCount(0),
-                  backgroundWidgetCount(0), foregroundWidgetCount(0), hasBackgroundLayer(false), rootScreen(nullptr) {
+                  backgroundWidgetCount(0), foregroundWidgetCount(0), hasBackgroundLayer(false), rootScreen(nullptr), lastAnimationRedrawMs(0) {
     for (int i = 0; i < 20; i++) {
         widgets[i] = nullptr;
         focusableWidgets[i] = -1;
         backgroundWidgets[i] = nullptr;
         foregroundWidgets[i] = nullptr;
     }
-    int dw = display ? display->width() : 240;
-    int dh = display ? display->height() : 135;
+    int dw = display ? display->width() : 0;
+    int dh = display ? display->height() : 0;
+    if (dw <= 0) dw = 240;
+    if (dh <= 0) dh = 135;
     rootScreen = new UIScreen(-1000, dw, dh, "RootScreen");
 }
 
@@ -198,19 +378,19 @@ void UIManager::drawAll() {
     if (hasBackgroundLayer) {
         for (int i = 0; i < backgroundWidgetCount; i++) {
             if (backgroundWidgets[i] && backgroundWidgets[i]->isVisible()) {
-                backgroundWidgets[i]->draw(display);
+                drawWidgetClipped(backgroundWidgets[i], false);
             }
         }
     }
     for (int i = 0; i < foregroundWidgetCount; i++) {
         if (foregroundWidgets[i] && foregroundWidgets[i]->isVisible()) {
-            foregroundWidgets[i]->draw(display);
+            drawWidgetClipped(foregroundWidgets[i], false);
         }
     }
     if (!hasBackgroundLayer && foregroundWidgetCount == 0) {
         for (int i = 0; i < widgetCount; i++) {
             if (widgets[i] && widgets[i]->isVisible()) {
-                widgets[i]->draw(display);
+                drawWidgetClipped(widgets[i], false);
             }
         }
     }
@@ -251,14 +431,14 @@ void UIManager::finishAppSetup() {
 void UIManager::drawWidget(int id) {
     UIWidget* widget = getWidget(id);
     if (widget && widget->isVisible()) {
-        widget->draw(display);
+        drawWidgetClipped(widget, false);
     }
 }
 
 void UIManager::drawWidgetPartial(int id) {
     UIWidget* widget = getWidget(id);
     if (widget && widget->isVisible()) {
-        widget->drawPartial(display);
+        drawWidgetClipped(widget, true);
     }
 }
 
@@ -266,7 +446,7 @@ void UIManager::drawForegroundPartial() {
     if (hasBackgroundLayer && foregroundWidgetCount > 0) {
         for (int i = 0; i < foregroundWidgetCount; i++) {
             if (foregroundWidgets[i] && foregroundWidgets[i]->isVisible()) {
-                foregroundWidgets[i]->drawPartial(display);
+                drawWidgetClipped(foregroundWidgets[i], true);
             }
         }
     }
@@ -274,6 +454,7 @@ void UIManager::drawForegroundPartial() {
 
 void UIManager::refreshAppArea() {
     if (hasBackgroundLayer && foregroundWidgetCount > 0) {
+        if (flushDirtyInAppArea()) return;
         UIWindow* appWindow = nullptr;
         for (int i = 0; i < foregroundWidgetCount; i++) {
             if (foregroundWidgets[i] && foregroundWidgets[i]->getType() == WIDGET_WINDOW) {
@@ -282,14 +463,15 @@ void UIManager::refreshAppArea() {
             }
         }
         if (appWindow) {
-            appWindow->clearAppArea(display);
+            drawWidgetClipped(appWindow, false);
             for (int i = 0; i < foregroundWidgetCount; i++) {
-                if (foregroundWidgets[i] && foregroundWidgets[i]->isVisible()) {
-                    foregroundWidgets[i]->draw(display);
+                if (foregroundWidgets[i] && foregroundWidgets[i]->isVisible() && foregroundWidgets[i] != appWindow) {
+                    drawWidgetClipped(foregroundWidgets[i], false);
                 }
             }
         }
     } else {
+        if (flushDirtyInRoot()) return;
         refresh();
     }
 }
@@ -299,6 +481,69 @@ void UIManager::smartRefresh() {
         refreshAppArea();
     } else {
         refresh();
+    }
+}
+
+void UIManager::tick() {
+    uint32_t nowMs = millis();
+    if (display && rootScreen) {
+        int w = display->width();
+        int h = display->height();
+        if (w > 0 && h > 0) {
+            rootScreen->setSize(w, h);
+        }
+    }
+    bool anyUpdateRequested = false;
+    if (hasBackgroundLayer) {
+        for (int i = 0; i < backgroundWidgetCount; i++) {
+            if (backgroundWidgets[i] && backgroundWidgets[i]->isVisible()) {
+                if (backgroundWidgets[i]->update(nowMs)) {
+                    backgroundWidgets[i]->invalidate();
+                    anyUpdateRequested = true;
+                }
+            }
+        }
+        for (int i = 0; i < foregroundWidgetCount; i++) {
+            if (foregroundWidgets[i] && foregroundWidgets[i]->isVisible()) {
+                if (foregroundWidgets[i]->update(nowMs)) {
+                    foregroundWidgets[i]->invalidate();
+                    anyUpdateRequested = true;
+                }
+            }
+        }
+    } else {
+        for (int i = 0; i < widgetCount; i++) {
+            if (widgets[i] && widgets[i]->isVisible()) {
+                if (widgets[i]->update(nowMs)) {
+                    widgets[i]->invalidate();
+                    anyUpdateRequested = true;
+                }
+            }
+        }
+    }
+    bool anyDirty = false;
+    if (hasBackgroundLayer) {
+        for (int i = 0; i < foregroundWidgetCount; i++) {
+            if (foregroundWidgets[i] && foregroundWidgets[i]->isVisible() && foregroundWidgets[i]->isDirty()) {
+                anyDirty = true;
+                break;
+            }
+        }
+    } else {
+        for (int i = 0; i < widgetCount; i++) {
+            if (widgets[i] && widgets[i]->isVisible() && widgets[i]->isDirty()) {
+                anyDirty = true;
+                break;
+            }
+        }
+    }
+    if (!anyUpdateRequested && !anyDirty) return;
+    if (nowMs - lastAnimationRedrawMs < 16) return;
+    lastAnimationRedrawMs = nowMs;
+    if (hasBackgroundLayer) {
+        flushDirtyInAppArea();
+    } else {
+        flushDirtyInRoot();
     }
 }
 

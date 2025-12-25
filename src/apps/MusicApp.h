@@ -167,14 +167,16 @@ private:
             display->fillRect(absX, absY, width, height, TFT_DARKGREY);
             
             // 绘制滑块边框
+            display->drawRect(absX, absY, width, height, TFT_WHITE);
             if (focused) {
-                display->drawRect(absX - 1, absY - 1, width + 2, height + 2, TFT_YELLOW);
-            } else {
-                display->drawRect(absX, absY, width, height, TFT_WHITE);
+                if (width > 2 && height > 2) display->drawRect(absX + 1, absY + 1, width - 2, height - 2, TFT_YELLOW);
+                if (width > 4 && height > 4) display->drawRect(absX + 2, absY + 2, width - 4, height - 4, TFT_YELLOW);
             }
             
             // 计算滑块位置（硬编码范围0-100）
             int sliderPos = absX + (getValue() * (width - 8)) / 100;
+            if (sliderPos < absX) sliderPos = absX;
+            if (sliderPos > absX + width - 8) sliderPos = absX + width - 8;
             
             // 绘制滑块指示器
             display->fillRect(sliderPos, absY + 2, 8, height - 4, TFT_WHITE);
@@ -183,7 +185,7 @@ private:
             String volumeText = "Vol: " + String(getValue()) + "%";
             display->setFont(&fonts::efontCN_12);
             display->setTextColor(TFT_WHITE);
-            display->drawString(volumeText, absX + width + 5, absY + 2);
+            display->drawString(volumeText, absX + 3, absY + 3);
         }
     };
 

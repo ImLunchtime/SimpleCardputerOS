@@ -10,11 +10,13 @@ public:
         : UIWidget(id, WIDGET_LABEL, x, y, text.length() * 6, 8, name, false),
           text(text), textColor(TFT_WHITE) {}
     void setText(const String& newText) {
+        if (text == newText) return;
         text = newText;
         width = text.length() * 6;
+        invalidate();
     }
     String getText() const { return text; }
-    void setTextColor(uint16_t color) { textColor = color; }
+    void setTextColor(uint16_t color) { if (textColor != color) { textColor = color; invalidate(); } }
     void draw(LGFX_Device* display) override {
         if (!visible) return;
         Theme* theme = getCurrentTheme();

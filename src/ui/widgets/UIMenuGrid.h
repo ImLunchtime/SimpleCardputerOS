@@ -143,5 +143,6 @@ private:
             selectedRow = selectedIndex / columns;
             selectedCol = selectedIndex % columns;
         }
+        invalidate();
     }
 };

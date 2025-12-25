@@ -15,11 +15,11 @@ public:
         : UIWidget(id, WIDGET_BUTTON, x, y, width, height, name, true),
           text(text), borderColor(TFT_BLUE), textColor(TFT_WHITE),
           imageData(nullptr), imageDataSize(0), imageFilePath(""), useFileImage(false) {}
-    void setText(const String& newText) { text = newText; }
-    void setBorderColor(uint16_t color) { borderColor = color; }
-    void setTextColor(uint16_t color) { textColor = color; }
-    void setImageData(const uint8_t* data, size_t dataSize) { imageData = data; imageDataSize = dataSize; useFileImage = false; }
-    void setImageFile(const String& file) { imageFilePath = file; useFileImage = true; }
+    void setText(const String& newText) { if (text != newText) { text = newText; invalidate(); } }
+    void setBorderColor(uint16_t color) { if (borderColor != color) { borderColor = color; invalidate(); } }
+    void setTextColor(uint16_t color) { if (textColor != color) { textColor = color; invalidate(); } }
+    void setImageData(const uint8_t* data, size_t dataSize) { imageData = data; imageDataSize = dataSize; useFileImage = false; invalidate(); }
+    void setImageFile(const String& file) { imageFilePath = file; useFileImage = true; invalidate(); }
     void draw(LGFX_Device* display) override {
         if (!visible) return;
         Theme* theme = getCurrentTheme();
@@ -49,8 +49,8 @@ public:
             display->fillRect(absX, absY, width, height, TFT_BLACK);
             display->drawRect(absX, absY, width, height, borderColor);
             if (focused) {
-                display->drawRect(absX - 1, absY - 1, width + 2, height + 2, TFT_YELLOW);
-                display->drawRect(absX - 2, absY - 2, width + 4, height + 4, TFT_YELLOW);
+                if (width > 2 && height > 2) display->drawRect(absX + 1, absY + 1, width - 2, height - 2, TFT_YELLOW);
+                if (width > 4 && height > 4) display->drawRect(absX + 2, absY + 2, width - 4, height - 4, TFT_YELLOW);
             }
             if (!(imageData || useFileImage)) {
                 display->setFont(&fonts::efontCN_12);
@@ -93,6 +93,7 @@ public:
         if (!focused || !visible) return false;
         if (event.enter) {
             onButtonClick();
+            invalidate();
             return true;
         }
         return false;

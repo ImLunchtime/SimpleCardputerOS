@@ -25,23 +25,28 @@ public:
         if (value > maxValue) value = maxValue;
         if (currentValue != value) {
             currentValue = value;
+            invalidate();
             onValueChanged(currentValue);
         }
     }
     int getValue() const { return currentValue; }
     void setRange(int min, int max) {
+        if (minValue == min && maxValue == max) return;
         minValue = min;
         maxValue = max;
+        invalidate();
         if (currentValue < minValue) setValue(minValue);
         if (currentValue > maxValue) setValue(maxValue);
     }
     void setColors(uint16_t track, uint16_t thumb, uint16_t focus) {
+        if (trackColor == track && thumbColor == thumb && focusColor == focus) return;
         trackColor = track;
         thumbColor = thumb;
         focusColor = focus;
+        invalidate();
     }
-    void setShowValue(bool show) { showValue = show; }
-    void setLabel(const String& newLabel) { label = newLabel; }
+    void setShowValue(bool show) { if (showValue != show) { showValue = show; invalidate(); } }
+    void setLabel(const String& newLabel) { if (label != newLabel) { label = newLabel; invalidate(); } }
     void draw(LGFX_Device* display) override {
         if (!visible) return;
         Theme* currentTheme = getCurrentTheme();
@@ -64,18 +69,36 @@ public:
             params.thumbColor = thumbColor;
             currentTheme->drawSlider(params);
         } else {
-            if (label.length() > 0) {
-                display->setFont(&fonts::efontCN_12);
-                display->setTextColor(TFT_WHITE);
-                display->setTextSize(1);
-                int absX = getAbsoluteX();
-                int absY = getAbsoluteY();
-                display->setCursor(absX, absY - 12);
-                display->print(label);
-            }
             int absX2 = getAbsoluteX();
             int absY2 = getAbsoluteY();
-            int trackY = absY2 + (height - 4) / 2;
+            display->setFont(&fonts::efontCN_12);
+            display->setTextColor(TFT_WHITE);
+            display->setTextSize(1);
+
+            int headerH = (label.length() > 0 || showValue) ? 10 : 0;
+            int trackAreaY = absY2 + headerH;
+            int trackAreaH = height - headerH;
+            if (trackAreaH < 6) {
+                headerH = 0;
+                trackAreaY = absY2;
+                trackAreaH = height;
+            }
+
+            if (headerH > 0) {
+                int headerY = absY2 + 1;
+                if (label.length() > 0) {
+                    display->setCursor(absX2 + 1, headerY);
+                    display->print(label);
+                }
+                if (showValue) {
+                    String valueText = String(currentValue);
+                    int textWidth = valueText.length() * 6;
+                    display->setCursor(absX2 + width - textWidth - 2, headerY);
+                    display->print(valueText);
+                }
+            }
+
+            int trackY = trackAreaY + (trackAreaH - 4) / 2;
             int trackHeight = 4;
             uint16_t borderColor = focused ? focusColor : TFT_WHITE;
             display->drawRect(absX2, trackY, width, trackHeight, borderColor);
@@ -85,18 +108,11 @@ public:
             if (range > 0) {
                 thumbX = absX2 + ((currentValue - minValue) * (width - 8)) / range;
             }
+            if (thumbX < absX2) thumbX = absX2;
+            if (thumbX > absX2 + width - 8) thumbX = absX2 + width - 8;
             uint16_t currentThumbColor = focused ? focusColor : thumbColor;
-            display->fillRect(thumbX, absY2, 8, height, currentThumbColor);
-            display->drawRect(thumbX, absY2, 8, height, TFT_BLACK);
-            if (showValue) {
-                display->setFont(&fonts::efontCN_12);
-                display->setTextColor(TFT_WHITE);
-                display->setTextSize(1);
-                String valueText = String(currentValue);
-                int textWidth = valueText.length() * 6;
-                display->setCursor(absX2 + width - textWidth, absY2 + height + 2);
-                display->print(valueText);
-            }
+            display->fillRect(thumbX, trackAreaY, 8, trackAreaH, currentThumbColor);
+            display->drawRect(thumbX, trackAreaY, 8, trackAreaH, TFT_BLACK);
         }
     }
     bool handleKeyEvent(const KeyEvent& event) override {

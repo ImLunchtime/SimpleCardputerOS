@@ -16,6 +16,7 @@ private:
     int foregroundWidgetCount;
     bool hasBackgroundLayer;
     UIScreen* rootScreen;
+    uint32_t lastAnimationRedrawMs;
 public:
     UIManager();
     ~UIManager();
@@ -41,6 +42,7 @@ public:
     void drawForegroundPartial();
     void refreshAppArea();
     void smartRefresh();
+    void tick();
     UILabel* createLabel(int id, int x, int y, const String& text, const String& name = "", UIWidget* parent = nullptr);
     UIButton* createButton(int id, int x, int y, int width, int height, const String& text, const String& name = "", UIWidget* parent = nullptr);
     UIButton* createImageButton(int id, int x, int y, int width, int height, const uint8_t* imageData, size_t dataSize, const String& name = "", UIWidget* parent = nullptr);
@@ -54,4 +56,9 @@ private:
     void removeFromMainList(UIWidget* widget);
     void rebuildFocusListForBackground();
     void rebuildFocusListForForeground();
+    bool computeClipRect(UIWidget* widget, int& outX, int& outY, int& outW, int& outH);
+    void drawWidgetClipped(UIWidget* widget, bool partial);
+    void drawWidgetClippedWithExtra(UIWidget* widget, bool partial, int clipX, int clipY, int clipW, int clipH);
+    bool flushDirtyInAppArea();
+    bool flushDirtyInRoot();
 };

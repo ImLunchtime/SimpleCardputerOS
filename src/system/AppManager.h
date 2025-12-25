@@ -139,6 +139,9 @@ public:
         if (currentApp) {
             currentApp->loop();
         }
+        if (globalUIManager) {
+            globalUIManager->tick();
+        }
     }
     
     // 处理键盘事件
