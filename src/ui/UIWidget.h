@@ -257,12 +257,12 @@ public:
                     int maxH = height - 2;
                     if (imageData) {
                         float scale = 1.0f;
-                        if (imgW > 0 && imgH > 0) {
-                            float sx = (float)maxW / (float)imgW;
-                            float sy = (float)maxH / (float)imgH;
-                            scale = sx < sy ? sx : sy;
-                            if (scale > 1.0f) scale = 1.0f;
-                        }
+                        // if (imgW > 0 && imgH > 0) {
+                        //     float sx = (float)maxW / (float)imgW;
+                        //     float sy = (float)maxH / (float)imgH;
+                        //     scale = sx < sy ? sx : sy;
+                        //     if (scale > 1.0f) scale = 1.0f;
+                        // }
                         int dw = (int)(imgW * scale);
                         int dh = (int)(imgH * scale);
                         int cx = absX + (width - dw) / 2;

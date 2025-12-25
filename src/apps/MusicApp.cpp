@@ -65,7 +65,7 @@ void MusicApp::setup() {
     M5Cardputer.Speaker.config(spk_cfg);
     
     // 创建主窗口 - 扩大窗口尺寸以容纳底部UI
-    mainWindow = new UIWindow(WINDOW_ID, 20, 15, 200, 114);
+    mainWindow = new UIWindow(WINDOW_ID, 20, 15, 200, 116);
     uiManager->addWidget(mainWindow);
     
     mainWindow->setChildOffset(-20, -16);
