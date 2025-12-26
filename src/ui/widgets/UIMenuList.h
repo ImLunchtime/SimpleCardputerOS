@@ -38,7 +38,7 @@ public:
           itemHeight(_itemHeight), scrollOffset(0), scrollPixel(0.0f), targetScrollPixel(0.0f), lastAnimMs(0), animating(false) {
         visibleItems = (height - 4) / itemHeight;
     }
-    void draw(LGFX_Device* display) override {
+    void draw(LovyanGFX* display) override {
         if (!visible) return;
         drawMenuBorder(display);
         int absX = getAbsoluteX();

@@ -20,7 +20,7 @@ public:
     void setTextColor(uint16_t color) { if (textColor != color) { textColor = color; invalidate(); } }
     void setImageData(const uint8_t* data, size_t dataSize) { imageData = data; imageDataSize = dataSize; useFileImage = false; invalidate(); }
     void setImageFile(const String& file) { imageFilePath = file; useFileImage = true; invalidate(); }
-    void draw(LGFX_Device* display) override {
+    void draw(LovyanGFX* display) override {
         if (!visible) return;
         Theme* theme = getCurrentTheme();
         if (theme) {

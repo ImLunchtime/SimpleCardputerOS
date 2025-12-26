@@ -85,29 +85,28 @@ public:
         outW = rx - nx;
         outH = by - ny;
     }
-    virtual void draw(LGFX_Device* display) = 0;
+    virtual void draw(LovyanGFX* display) = 0;
     virtual bool handleKeyEvent(const KeyEvent& event) = 0;
     virtual void onFocusChanged(bool hasFocus) {}
     virtual bool update(uint32_t nowMs) { return false; }
-    virtual void clearArea(LGFX_Device* display) {
+    virtual void clearArea(LovyanGFX* display) {
         int ax, ay, aw, ah;
         getAbsoluteBounds(ax, ay, aw, ah);
-        display->fillRect(ax, ay, aw, ah, TFT_BLACK);
+        Theme* theme = getCurrentTheme();
+        if (theme) {
+            theme->clearArea(display, ax, ay, aw, ah);
+        } else {
+            display->fillRect(ax, ay, aw, ah, TFT_BLACK);
+        }
     }
-    virtual void drawPartial(LGFX_Device* display) {
+    virtual void drawPartial(LovyanGFX* display) {
         clearArea(display);
         draw(display);
     }
-    virtual void clearAppArea(LGFX_Device* display) {
-        if (type == WIDGET_WINDOW) {
-            int ax, ay, aw, ah;
-            getAbsoluteBounds(ax, ay, aw, ah);
-            display->fillRect(ax, ay, aw, ah, TFT_BLACK);
-        } else {
-            clearArea(display);
-        }
+    virtual void clearAppArea(LovyanGFX* display) {
+        clearArea(display);
     }
-    virtual void drawAppPartial(LGFX_Device* display) {
+    virtual void drawAppPartial(LovyanGFX* display) {
         clearAppArea(display);
         draw(display);
     }

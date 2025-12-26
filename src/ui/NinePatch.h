@@ -91,7 +91,7 @@ public:
     // 边框与角落尺寸由 metrics 指定；未指定时使用集合中图块自身尺寸。
     // edgeMode 控制边框的填充模式（平铺/拉伸），centerMode 控制中心区域填充模式。
     static void drawWindow(
-        LGFX_Device* display,
+        LovyanGFX* display,
         const NinePatchSet& set,
         int x, int y, int width, int height,
         const NinePatchMetrics& metrics,
@@ -105,18 +105,18 @@ public:
 
 private:
     // 将图块以指定模式绘制到目标矩形
-    static void drawPatch(LGFX_Device* display,
+    static void drawPatch(LovyanGFX* display,
                           const NinePatchImage& img,
                           const NinePatchRect& dst,
                           NinePatchFillMode mode);
 
     // 辅助：平铺复制生成临时缓冲并 pushImage
-    static void blitTile(LGFX_Device* display,
+    static void blitTile(LovyanGFX* display,
                          const NinePatchImage& img,
                          const NinePatchRect& dst);
 
     // 辅助：最近邻拉伸生成临时缓冲并 pushImage
-    static void blitStretch(LGFX_Device* display,
+    static void blitStretch(LovyanGFX* display,
                             const NinePatchImage& img,
                             const NinePatchRect& dst);
 };

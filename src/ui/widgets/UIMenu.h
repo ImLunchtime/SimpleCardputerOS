@@ -115,7 +115,7 @@ public:
     }
     virtual void onItemSelected(MenuItem* item) {}
 protected:
-    void drawMenuBorder(LGFX_Device* display) {
+    void drawMenuBorder(LovyanGFX* display) {
         Theme* currentTheme = getCurrentTheme();
         if (currentTheme) {
             ThemeDrawParams params;

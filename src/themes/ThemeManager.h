@@ -3,7 +3,7 @@
 
 // 主题绘制参数结构
 struct ThemeDrawParams {
-    LGFX_Device* display;
+    LovyanGFX* display;
     int x, y, width, height;
     bool focused;
     bool visible;
@@ -43,7 +43,7 @@ struct SliderDrawParams : public ThemeDrawParams {
 
 // 菜单项绘制参数
 struct MenuItemDrawParams {
-    LGFX_Device* display;
+    LovyanGFX* display;
     int x, y, width, height;
     String text;
     bool selected;
@@ -61,7 +61,7 @@ struct MenuItemDrawParams {
 
 // 网格菜单项绘制参数
 struct GridMenuItemDrawParams {
-    LGFX_Device* display;
+    LovyanGFX* display;
     int x, y, width, height;
     String text;
     bool selected;
@@ -120,7 +120,7 @@ public:
     virtual void drawGridMenuItem(const GridMenuItemDrawParams& params) = 0;
     
     // 清除区域函数
-    virtual void clearArea(LGFX_Device* display, int x, int y, int width, int height) = 0;
+    virtual void clearArea(LovyanGFX* display, int x, int y, int width, int height) = 0;
     
     // 主题信息
     virtual String getThemeName() const = 0;

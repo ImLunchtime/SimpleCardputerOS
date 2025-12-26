@@ -3,7 +3,7 @@
 static inline int clampPositive(int v) { return v < 0 ? 0 : v; }
 
 void NinePatchRenderer::drawWindow(
-    LGFX_Device* display,
+    LovyanGFX* display,
     const NinePatchSet& set,
     int x, int y, int width, int height,
     const NinePatchMetrics& m,
@@ -76,7 +76,7 @@ NinePatchRect NinePatchRenderer::getContentRect(
     return r;
 }
 
-void NinePatchRenderer::drawPatch(LGFX_Device* display,
+void NinePatchRenderer::drawPatch(LovyanGFX* display,
                                   const NinePatchImage& img,
                                   const NinePatchRect& dst,
                                   NinePatchFillMode mode) {
@@ -88,7 +88,7 @@ void NinePatchRenderer::drawPatch(LGFX_Device* display,
     }
 }
 
-void NinePatchRenderer::blitTile(LGFX_Device* display,
+void NinePatchRenderer::blitTile(LovyanGFX* display,
                                  const NinePatchImage& img,
                                  const NinePatchRect& dst) {
     const int outW = dst.width;
@@ -113,7 +113,7 @@ void NinePatchRenderer::blitTile(LGFX_Device* display,
     delete[] buffer;
 }
 
-void NinePatchRenderer::blitStretch(LGFX_Device* display,
+void NinePatchRenderer::blitStretch(LovyanGFX* display,
                                     const NinePatchImage& img,
                                     const NinePatchRect& dst) {
     const int outW = dst.width;

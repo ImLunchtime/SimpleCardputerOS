@@ -4,7 +4,7 @@
 #include "system/EventSystem.h"
 class UIManager {
 private:
-    LGFX_Device* display;
+    LovyanGFX* display;
     UIWidget* widgets[20];
     int widgetCount;
     int currentFocus;
@@ -17,6 +17,7 @@ private:
     bool hasBackgroundLayer;
     UIScreen* rootScreen;
     uint32_t lastAnimationRedrawMs;
+    LGFX_Sprite* windowCanvas;
 public:
     UIManager();
     ~UIManager();
@@ -58,7 +59,9 @@ private:
     void rebuildFocusListForForeground();
     bool computeClipRect(UIWidget* widget, int& outX, int& outY, int& outW, int& outH);
     void drawWidgetClipped(UIWidget* widget, bool partial);
+    void drawWidgetClippedOn(LovyanGFX* target, UIWidget* widget, bool partial);
     void drawWidgetClippedWithExtra(UIWidget* widget, bool partial, int clipX, int clipY, int clipW, int clipH);
     bool flushDirtyInAppArea();
     bool flushDirtyInRoot();
+    void drawAllOn(LovyanGFX* target);
 };

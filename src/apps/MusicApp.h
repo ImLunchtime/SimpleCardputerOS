@@ -160,7 +160,7 @@ private:
             : UISlider(id, x, y, width, height, 0, 100, 50, "Volume", name) {
         }
         
-        void draw(LGFX_Device* display) override {
+        void draw(LovyanGFX* display) override {
             // 绘制滑块背景
             int absX = getAbsoluteX();
             int absY = getAbsoluteY();

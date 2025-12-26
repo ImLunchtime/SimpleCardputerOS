@@ -20,7 +20,7 @@ private:
     static const uint16_t WIN98_EDIT_BACKGROUND = 0xFFFF;  // 编辑框白色背景
 
     // 绘制立体边框的辅助函数
-    void drawRaisedBorder(LGFX_Device* display, int x, int y, int width, int height) {
+    void drawRaisedBorder(LovyanGFX* display, int x, int y, int width, int height) {
         // 外层高光 (左上)
         display->drawFastHLine(x, y, width - 1, WIN98_BUTTON_HIGHLIGHT);
         display->drawFastVLine(x, y, height - 1, WIN98_BUTTON_HIGHLIGHT);
@@ -38,7 +38,7 @@ private:
         display->drawFastVLine(x + width - 2, y + 2, height - 3, WIN98_BUTTON_SHADOW);
     }
 
-    void drawSunkenBorder(LGFX_Device* display, int x, int y, int width, int height) {
+    void drawSunkenBorder(LovyanGFX* display, int x, int y, int width, int height) {
         // 外层阴影 (左上)
         display->drawFastHLine(x, y, width - 1, WIN98_BUTTON_DARK_SHADOW);
         display->drawFastVLine(x, y, height - 1, WIN98_BUTTON_DARK_SHADOW);
@@ -279,7 +279,7 @@ public:
         }
     }
     
-    void clearArea(LGFX_Device* display, int x, int y, int width, int height) override {
+    void clearArea(LovyanGFX* display, int x, int y, int width, int height) override {
         if (!display) return;
         display->fillRect(x, y, width, height, WIN98_WINDOW_BACKGROUND);
     }

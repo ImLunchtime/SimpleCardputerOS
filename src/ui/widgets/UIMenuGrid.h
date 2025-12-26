@@ -16,7 +16,7 @@ public:
         itemWidth = (width - 4) / columns;
         itemHeight = (height - 4) / rows;
     }
-    void draw(LGFX_Device* display) override {
+    void draw(LovyanGFX* display) override {
         if (!visible) return;
         drawMenuBorder(display);
         int absX = getAbsoluteX();

@@ -37,7 +37,7 @@ public:
     void setMaintainAspectRatio(bool maintain) {
         maintainAspectRatio = maintain;
     }
-    void draw(LGFX_Device* display) override {
+    void draw(LovyanGFX* display) override {
         if (!visible) return;
         int absX = getAbsoluteX();
         int absY = getAbsoluteY();

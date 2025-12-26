@@ -5,9 +5,10 @@ class UILabel : public UIWidget {
 private:
     String text;
     uint16_t textColor;
+    static constexpr int kLabelHeight = 16;
 public:
     UILabel(int id, int x, int y, const String& text, const String& name = "")
-        : UIWidget(id, WIDGET_LABEL, x, y, text.length() * 6, 8, name, false),
+        : UIWidget(id, WIDGET_LABEL, x, y, text.length() * 6, kLabelHeight, name, false),
           text(text), textColor(TFT_WHITE) {}
     void setText(const String& newText) {
         if (text == newText) return;
@@ -17,7 +18,7 @@ public:
     }
     String getText() const { return text; }
     void setTextColor(uint16_t color) { if (textColor != color) { textColor = color; invalidate(); } }
-    void draw(LGFX_Device* display) override {
+    void draw(LovyanGFX* display) override {
         if (!visible) return;
         Theme* theme = getCurrentTheme();
         if (theme) {
@@ -43,7 +44,7 @@ public:
             display->print(text);
         }
     }
-    void drawPartial(LGFX_Device* display) override {
+    void drawPartial(LovyanGFX* display) override {
         if (!visible) return;
         clearArea(display);
         draw(display);

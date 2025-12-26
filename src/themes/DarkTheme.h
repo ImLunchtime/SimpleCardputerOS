@@ -239,7 +239,7 @@ public:
         }
     }
     
-    void clearArea(LGFX_Device* display, int x, int y, int width, int height) override {
+    void clearArea(LovyanGFX* display, int x, int y, int width, int height) override {
         if (display) {
             display->fillRect(x, y, width, height, TFT_BLACK);
         }

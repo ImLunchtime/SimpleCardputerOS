@@ -100,5 +100,5 @@ void loop() {
   // 更新当前App
   globalAppManager.update();
   
-  delay(50);  // 减少CPU使用
+  delay(10);
 }

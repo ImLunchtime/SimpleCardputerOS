@@ -1,5 +1,5 @@
 #include "UIManager.h"
-
+#include <lgfx/v1/LGFX_Sprite.hpp>
 static bool rectIntersects(int ax, int ay, int aw, int ah, int bx, int by, int bw, int bh) {
     if (aw <= 0 || ah <= 0 || bw <= 0 || bh <= 0) return false;
     int ar = ax + aw;
@@ -106,6 +106,8 @@ bool UIManager::flushDirtyInAppArea() {
     }
     if (!hasDirty) return false;
 
+    if (display) display->startWrite();
+
     UIWindow* appWindow = nullptr;
     for (int i = 0; i < foregroundWidgetCount; i++) {
         if (foregroundWidgets[i] && foregroundWidgets[i]->getType() == WIDGET_WINDOW) {
@@ -132,6 +134,8 @@ bool UIManager::flushDirtyInAppArea() {
             w->markDrawn();
         }
     }
+
+    if (display) display->endWrite();
     return true;
 }
 
@@ -160,6 +164,8 @@ bool UIManager::flushDirtyInRoot() {
     }
     if (!hasDirty) return false;
 
+    if (display) display->startWrite();
+
     for (int i = 0; i < widgetCount; i++) {
         UIWidget* w = widgets[i];
         if (!w || !w->isVisible()) continue;
@@ -175,11 +181,13 @@ bool UIManager::flushDirtyInRoot() {
             w->markDrawn();
         }
     }
+
+    if (display) display->endWrite();
     return true;
 }
 
 UIManager::UIManager() : display(&M5Cardputer.Display), widgetCount(0), currentFocus(-1), focusableCount(0),
-                  backgroundWidgetCount(0), foregroundWidgetCount(0), hasBackgroundLayer(false), rootScreen(nullptr), lastAnimationRedrawMs(0) {
+                  backgroundWidgetCount(0), foregroundWidgetCount(0), hasBackgroundLayer(false), rootScreen(nullptr), lastAnimationRedrawMs(0), windowCanvas(nullptr) {
     for (int i = 0; i < 20; i++) {
         widgets[i] = nullptr;
         focusableWidgets[i] = -1;
@@ -196,6 +204,45 @@ UIManager::UIManager() : display(&M5Cardputer.Display), widgetCount(0), currentF
 UIManager::~UIManager() {
     clear();
     if (rootScreen) { delete rootScreen; rootScreen = nullptr; }
+    if (windowCanvas) {
+        windowCanvas->deleteSprite();
+        delete windowCanvas;
+        windowCanvas = nullptr;
+    }
+}
+
+void UIManager::drawAllOn(LovyanGFX* target) {
+    if (!target) return;
+    if (hasBackgroundLayer) {
+        for (int i = 0; i < backgroundWidgetCount; i++) {
+            if (backgroundWidgets[i] && backgroundWidgets[i]->isVisible()) {
+                drawWidgetClippedOn(target, backgroundWidgets[i], false);
+            }
+        }
+    }
+    for (int i = 0; i < foregroundWidgetCount; i++) {
+        if (foregroundWidgets[i] && foregroundWidgets[i]->isVisible()) {
+            drawWidgetClippedOn(target, foregroundWidgets[i], false);
+        }
+    }
+    if (!hasBackgroundLayer && foregroundWidgetCount == 0) {
+        for (int i = 0; i < widgetCount; i++) {
+            if (widgets[i] && widgets[i]->isVisible()) {
+                drawWidgetClippedOn(target, widgets[i], false);
+            }
+        }
+    }
+}
+
+void UIManager::drawWidgetClippedOn(LovyanGFX* target, UIWidget* widget, bool partial) {
+    if (!target || !widget) return;
+    int cx, cy, cw, ch;
+    if (!computeClipRect(widget, cx, cy, cw, ch)) return;
+    target->setClipRect(cx, cy, cw, ch);
+    if (partial) widget->drawPartial(target);
+    else widget->draw(target);
+    target->clearClipRect();
+    widget->markDrawn();
 }
 
 void UIManager::addWidget(UIWidget* widget) {
@@ -375,30 +422,39 @@ void UIManager::clearScreen() {
 }
 
 void UIManager::drawAll() {
-    if (hasBackgroundLayer) {
-        for (int i = 0; i < backgroundWidgetCount; i++) {
-            if (backgroundWidgets[i] && backgroundWidgets[i]->isVisible()) {
-                drawWidgetClipped(backgroundWidgets[i], false);
-            }
+    if (!display) return;
+    display->startWrite();
+    for (int i = 0; i < widgetCount; i++) {
+        UIWidget* w = widgets[i];
+        if (w && w->isVisible()) {
+            drawWidgetClipped(w, false);
         }
     }
-    for (int i = 0; i < foregroundWidgetCount; i++) {
-        if (foregroundWidgets[i] && foregroundWidgets[i]->isVisible()) {
-            drawWidgetClipped(foregroundWidgets[i], false);
-        }
-    }
-    if (!hasBackgroundLayer && foregroundWidgetCount == 0) {
-        for (int i = 0; i < widgetCount; i++) {
-            if (widgets[i] && widgets[i]->isVisible()) {
-                drawWidgetClipped(widgets[i], false);
-            }
-        }
-    }
+    display->endWrite();
 }
 
 void UIManager::refresh() {
-    clearScreen();
-    drawAll();
+    if (!display) return;
+    int dw = display->width();
+    int dh = display->height();
+    if (dw <= 0 || dh <= 0) return;
+    if (!windowCanvas) {
+        windowCanvas = new LGFX_Sprite(display);
+    }
+    if (windowCanvas->width() != dw || windowCanvas->height() != dh) {
+        windowCanvas->deleteSprite();
+        windowCanvas->createSprite(dw, dh);
+    }
+    Theme* theme = getCurrentTheme();
+    if (theme) {
+        theme->clearArea(windowCanvas, 0, 0, dw, dh);
+    } else {
+        windowCanvas->fillScreen(TFT_BLACK);
+    }
+    windowCanvas->startWrite();
+    drawAllOn(windowCanvas);
+    windowCanvas->endWrite();
+    windowCanvas->pushSprite(0, 0);
 }
 
 void UIManager::switchToApp() {
@@ -408,24 +464,20 @@ void UIManager::switchToApp() {
     if (foregroundWidgetCount > 0) {
         clearForeground();
     }
-    clearScreen();
 }
 
 void UIManager::switchToLauncher() {
     if (foregroundWidgetCount > 0) {
         clearForeground();
     }
-    clearScreen();
-    drawAll();
+    smartRefresh();
 }
 
 void UIManager::finishAppSetup() {
     if (hasBackgroundLayer && foregroundWidgetCount > 0) {
         rebuildFocusListForForeground();
-        drawForegroundPartial();
-    } else {
-        drawAll();
     }
+    smartRefresh();
 }
 
 void UIManager::drawWidget(int id) {
@@ -453,35 +505,11 @@ void UIManager::drawForegroundPartial() {
 }
 
 void UIManager::refreshAppArea() {
-    if (hasBackgroundLayer && foregroundWidgetCount > 0) {
-        if (flushDirtyInAppArea()) return;
-        UIWindow* appWindow = nullptr;
-        for (int i = 0; i < foregroundWidgetCount; i++) {
-            if (foregroundWidgets[i] && foregroundWidgets[i]->getType() == WIDGET_WINDOW) {
-                appWindow = static_cast<UIWindow*>(foregroundWidgets[i]);
-                break;
-            }
-        }
-        if (appWindow) {
-            drawWidgetClipped(appWindow, false);
-            for (int i = 0; i < foregroundWidgetCount; i++) {
-                if (foregroundWidgets[i] && foregroundWidgets[i]->isVisible() && foregroundWidgets[i] != appWindow) {
-                    drawWidgetClipped(foregroundWidgets[i], false);
-                }
-            }
-        }
-    } else {
-        if (flushDirtyInRoot()) return;
-        refresh();
-    }
+    refresh();
 }
 
 void UIManager::smartRefresh() {
-    if (hasBackgroundLayer && foregroundWidgetCount > 0) {
-        refreshAppArea();
-    } else {
-        refresh();
-    }
+    refresh();
 }
 
 void UIManager::tick() {
@@ -540,11 +568,7 @@ void UIManager::tick() {
     if (!anyUpdateRequested && !anyDirty) return;
     if (nowMs - lastAnimationRedrawMs < 16) return;
     lastAnimationRedrawMs = nowMs;
-    if (hasBackgroundLayer) {
-        flushDirtyInAppArea();
-    } else {
-        flushDirtyInRoot();
-    }
+    smartRefresh();
 }
 
 UILabel* UIManager::createLabel(int id, int x, int y, const String& text, const String& name, UIWidget* parent) {

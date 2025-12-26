@@ -16,7 +16,7 @@ public:
     void setChildOffset(int ox, int oy) { childOffsetX = ox; childOffsetY = oy; }
     void setTitle(const String& newTitle) { title = newTitle; }
     void setBorderColor(uint16_t color) { borderColor = color; }
-    void draw(LGFX_Device* display) override {
+    void draw(LovyanGFX* display) override {
         if (!visible) return;
         Theme* theme = getCurrentTheme();
         if (theme) {
@@ -48,15 +48,15 @@ public:
             }
         }
     }
-    void drawPartial(LGFX_Device* display) override {
+    void drawPartial(LovyanGFX* display) override {
         if (!visible) return;
         draw(display);
     }
-    void clearAppArea(LGFX_Device* display) override {
+    void clearAppArea(LovyanGFX* display) override {
         if (!visible) return;
         return;
     }
-    void drawAppPartial(LGFX_Device* display) override {
+    void drawAppPartial(LovyanGFX* display) override {
         if (!visible) return;
         draw(display);
     }

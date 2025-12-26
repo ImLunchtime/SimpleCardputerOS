@@ -47,7 +47,7 @@ public:
     }
     void setShowValue(bool show) { if (showValue != show) { showValue = show; invalidate(); } }
     void setLabel(const String& newLabel) { if (label != newLabel) { label = newLabel; invalidate(); } }
-    void draw(LGFX_Device* display) override {
+    void draw(LovyanGFX* display) override {
         if (!visible) return;
         Theme* currentTheme = getCurrentTheme();
         if (currentTheme) {
