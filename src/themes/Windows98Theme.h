@@ -259,6 +259,9 @@ public:
                     float sx = (float)maxW / (float)imgW;
                     float sy = (float)maxH / (float)imgH;
                     float scale = sx < sy ? sx : sy;
+                    if (imgW == 32 && imgH == 32) {
+                        scale = 1.0f;
+                    }
                     if (scale > 1.0f) scale = 1.0f;
                     int dw = (int)(imgW * scale);
                     int dh = (int)(imgH * scale);
