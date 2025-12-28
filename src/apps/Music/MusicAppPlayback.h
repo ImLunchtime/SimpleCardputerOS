@@ -126,6 +126,9 @@ inline void MusicApp::updateUIFromAudioStatus() {
             String info = "(" + String(audioStatus.currentFileIndex + 1) + "/" + String(musicFileCount) + ") ";
             info += String(audioStatus.currentSongName);
             songLabel->setText(info);
+            if (playerSongLabel) {
+                playerSongLabel->setText(info);
+            }
         }
         
         xSemaphoreGive(audioStatusMutex);

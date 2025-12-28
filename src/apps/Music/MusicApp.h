@@ -90,6 +90,11 @@ struct MenuState {
     int selectedIndex;
 };
 
+enum MusicViewMode {
+    VIEW_LIST,
+    VIEW_PLAYER
+};
+
 // M5Speaker 音频输出类 - 与参考实现保持一致
 class AudioOutputM5Speaker : public AudioOutput {
 public:
@@ -223,6 +228,8 @@ private:
     MusicMenuList* playList;  // 改为自定义菜单列表
     VolumeSlider* volumeSlider;  // 音量滑块
     UIWindow* mainWindow;
+    UIWindow* playerWindow;
+    UILabel* playerSongLabel;
     
     // 音频组件（仅在主线程使用）
     static constexpr uint8_t m5spk_virtual_channel = 0;
@@ -252,6 +259,7 @@ private:
     
     // 菜单导航状态
     MenuState menuState;
+    MusicViewMode viewMode;
 
     std::vector<LyricLine> lyricLines;
     bool lyricsAvailable;
@@ -307,6 +315,8 @@ private:
     void updateSongInfo();
     void cleanup();
     void drawInterface();
+    void showListView();
+    void showPlayerView();
     void prepareLyricsForCurrentSong();
     void clearLyrics();
     void loadLyricsForFile(const String& mp3Path);

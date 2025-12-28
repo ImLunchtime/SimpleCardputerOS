@@ -76,6 +76,7 @@ inline void MusicApp::playSelectedSong() {
                 if (String(musicFiles[i].path) == track->filePath) {
                     currentFileIndex = i;
                     playCurrentSong();
+                    showPlayerView();
                     return;
                 }
             }
@@ -114,6 +115,9 @@ inline void MusicApp::updateSongInfo() {
         String info = "(" + String(currentFileIndex + 1) + "/" + String(musicFileCount) + ") ";
         info += musicFiles[currentFileIndex].name;
         songLabel->setText(info);
+        if (playerSongLabel) {
+            playerSongLabel->setText(info);
+        }
     }
 }
 
