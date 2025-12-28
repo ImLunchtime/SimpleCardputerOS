@@ -114,7 +114,7 @@ public:
             animating = false;
             return true;
         }
-        float speed = 420.0f;
+        float speed = 80.0f;
         float maxStep = speed * dt;
         if (maxStep > absDiff) maxStep = absDiff;
         scrollPixel += (diff >= 0.0f ? maxStep : -maxStep);

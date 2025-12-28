@@ -110,7 +110,18 @@ public:
             params.display->print(params.text);
         }
     }
-
+    
+    void drawPanel(const ThemeDrawParams& params) override {
+        if (!params.visible || !params.display) return;
+        NinePatchRenderer::drawWindow(
+            params.display,
+            windowSet,
+            params.x, params.y, params.width, params.height,
+            windowMetrics,
+            NinePatchFillMode::Tile,
+            NinePatchFillMode::Tile);
+    }
+    
     void drawSlider(const SliderDrawParams& params) override {
         if (!params.visible || !params.display) return;
 

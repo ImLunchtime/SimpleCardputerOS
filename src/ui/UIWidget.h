@@ -4,6 +4,7 @@
 #include "widgets/UILabel.h"
 #include "widgets/UIButton.h"
 #include "widgets/UIWindow.h"
+#include "widgets/UIPanel.h"
 #include "widgets/UIMenu.h"
 #include "widgets/UIMenuList.h"
 #include "widgets/UIMenuGrid.h"

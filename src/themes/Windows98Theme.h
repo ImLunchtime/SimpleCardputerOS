@@ -154,6 +154,12 @@ public:
         }
     }
     
+    void drawPanel(const ThemeDrawParams& params) override {
+        if (!params.visible || !params.display) return;
+        params.display->fillRect(params.x + 2, params.y + 2, params.width - 4, params.height - 4, WIN98_WINDOW_BACKGROUND);
+        drawRaisedBorder(params.display, params.x, params.y, params.width, params.height);
+    }
+    
     void drawSlider(const SliderDrawParams& params) override {
         if (!params.visible || !params.display) return;
         

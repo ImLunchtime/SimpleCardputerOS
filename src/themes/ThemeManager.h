@@ -112,6 +112,7 @@ public:
     virtual void drawLabel(const ThemeDrawParams& params) = 0;
     virtual void drawButton(const ThemeDrawParams& params) = 0;
     virtual void drawWindow(const ThemeDrawParams& params) = 0;
+    virtual void drawPanel(const ThemeDrawParams& params) = 0;
     virtual void drawSlider(const SliderDrawParams& params) = 0;
     
     // 菜单相关绘制函数

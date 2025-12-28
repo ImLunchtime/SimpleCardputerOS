@@ -85,6 +85,12 @@ public:
         }
     }
     
+    void drawPanel(const ThemeDrawParams& params) override {
+        if (!params.visible || !params.display) return;
+        params.display->fillRect(params.x, params.y, params.width, params.height, params.backgroundColor);
+        params.display->drawRect(params.x, params.y, params.width, params.height, params.borderColor);
+    }
+    
     void drawSlider(const SliderDrawParams& params) override {
         if (!params.visible || !params.display) return;
         
