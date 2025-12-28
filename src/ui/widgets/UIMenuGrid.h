@@ -9,25 +9,64 @@ private:
     int itemHeight;
     int selectedRow;
     int selectedCol;
+    int scrollRowOffset;
+    float scrollPixel;
+    float targetScrollPixel;
+    uint32_t lastAnimMs;
+    bool animating;
 public:
     UIMenuGrid(int id, int x, int y, int width, int height, int _columns, int _rows, const String& name = "")
         : UIMenu(id, WIDGET_MENU_GRID, x, y, width, height, name),
-          columns(_columns), rows(_rows), selectedRow(0), selectedCol(0) {
+          columns(_columns), rows(_rows),
+          selectedRow(0), selectedCol(0),
+          scrollRowOffset(0), scrollPixel(0.0f),
+          targetScrollPixel(0.0f), lastAnimMs(0),
+          animating(false) {
         itemWidth = (width - 4) / columns;
         itemHeight = (height - 4) / rows;
     }
+private:
+    int totalRows() const {
+        if (columns <= 0) return 0;
+        if (itemCount <= 0) return 0;
+        return (itemCount + columns - 1) / columns;
+    }
+    void setScrollRowOffsetAnimated(int newOffset) {
+        if (newOffset < 0) newOffset = 0;
+        int maxTop = totalRows() - rows;
+        if (maxTop < 0) maxTop = 0;
+        if (newOffset > maxTop) newOffset = maxTop;
+        float current = animating ? scrollPixel : ((float)scrollRowOffset * (float)itemHeight);
+        scrollRowOffset = newOffset;
+        targetScrollPixel = (float)scrollRowOffset * (float)itemHeight;
+        scrollPixel = current;
+        animating = true;
+        lastAnimMs = 0;
+        invalidate();
+    }
+public:
     void draw(LovyanGFX* display) override {
         if (!visible) return;
         drawMenuBorder(display);
         int absX = getAbsoluteX();
         int absY = getAbsoluteY();
-        for (int row = 0; row < rows; row++) {
+        float sp = animating ? scrollPixel : ((float)scrollRowOffset * (float)itemHeight);
+        if (sp < 0.0f) sp = 0.0f;
+        int maxTop = totalRows() - rows;
+        if (maxTop < 0) maxTop = 0;
+        float maxSp = (float)maxTop * (float)itemHeight;
+        if (sp > maxSp) sp = maxSp;
+        int firstRow = itemHeight > 0 ? (int)(sp / (float)itemHeight) : 0;
+        int yOffset = itemHeight > 0 ? -(int)(sp - (float)firstRow * (float)itemHeight) : 0;
+        int drawRows = rows + 1;
+        for (int row = 0; row < drawRows; row++) {
             for (int col = 0; col < columns; col++) {
-                int itemIndex = row * columns + col;
+                int globalRow = firstRow + row;
+                int itemIndex = globalRow * columns + col;
                 if (itemIndex >= itemCount || !items[itemIndex]) continue;
                 MenuItem* item = items[itemIndex];
                 int itemX = absX + 2 + col * itemWidth;
-                int itemY = absY + 2 + row * itemHeight;
+                int itemY = absY + 2 + yOffset + row * itemHeight;
                 Theme* currentTheme = getCurrentTheme();
                 if (currentTheme) {
                     GridMenuItemDrawParams params;
@@ -37,7 +76,7 @@ public:
                     params.width = itemWidth;
                     params.height = itemHeight;
                     params.text = (item->imageData || item->useFileImage) ? String("") : item->text;
-                    params.selected = (row == selectedRow && col == selectedCol);
+                    params.selected = (globalRow == selectedRow && col == selectedCol);
                     params.enabled = item->enabled;
                     params.focused = focused;
                     params.textColor = textColor;
@@ -51,7 +90,7 @@ public:
                     params.useFile = item->useFileImage;
                     currentTheme->drawGridMenuItem(params);
                 } else {
-                    if (focused && row == selectedRow && col == selectedCol) {
+                    if (focused && globalRow == selectedRow && col == selectedCol) {
                         display->fillRect(itemX, itemY, itemWidth, itemHeight, selectedColor);
                     }
                     display->drawRect(itemX, itemY, itemWidth, itemHeight, TFT_DARKGREY);
@@ -84,7 +123,7 @@ public:
                         }
                     } else {
                         uint16_t color = item->enabled ? textColor : disabledColor;
-                        if (focused && row == selectedRow && col == selectedCol) {
+                        if (focused && globalRow == selectedRow && col == selectedCol) {
                             color = TFT_BLACK;
                         }
                         display->setFont(&fonts::efontCN_12);
@@ -100,18 +139,50 @@ public:
             }
         }
     }
-    bool handleSecondaryKeyEvent(const KeyEvent& event) override {
-        if (itemCount == 0) return false;
-        if (event.up && selectedRow > 0) {
-            selectedRow--;
-            updateSelectedIndex();
+    bool update(uint32_t nowMs) override {
+        if (!visible || itemHeight <= 0) return false;
+        if (!animating) return false;
+        if (lastAnimMs == 0) {
+            lastAnimMs = nowMs;
             return true;
         }
-        if (event.down && selectedRow < rows - 1) {
-            int newIndex = (selectedRow + 1) * columns + selectedCol;
-            if (newIndex < itemCount) {
+        float dt = (float)(nowMs - lastAnimMs) / 1000.0f;
+        lastAnimMs = nowMs;
+        if (dt <= 0.0f) return false;
+        float diff = targetScrollPixel - scrollPixel;
+        float absDiff = diff >= 0.0f ? diff : -diff;
+        if (absDiff < 0.5f) {
+            scrollPixel = targetScrollPixel;
+            animating = false;
+            return true;
+        }
+        float speed = 80.0f;
+        float maxStep = speed * dt;
+        if (maxStep > absDiff) maxStep = absDiff;
+        scrollPixel += (diff >= 0.0f ? maxStep : -maxStep);
+        return true;
+    }
+    bool handleSecondaryKeyEvent(const KeyEvent& event) override {
+        if (itemCount == 0) return false;
+        int total = totalRows();
+        if (total <= 0) total = 1;
+        if (event.up) {
+            if (selectedRow > 0) {
+                selectedRow--;
+                updateSelectedIndex();
+                if (selectedRow < scrollRowOffset) {
+                    setScrollRowOffsetAnimated(selectedRow);
+                }
+            }
+            return true;
+        }
+        if (event.down) {
+            if (selectedRow < total - 1) {
                 selectedRow++;
                 updateSelectedIndex();
+                if (selectedRow >= scrollRowOffset + rows) {
+                    setScrollRowOffsetAnimated(selectedRow - rows + 1);
+                }
             }
             return true;
         }
@@ -120,11 +191,13 @@ public:
             updateSelectedIndex();
             return true;
         }
-        if (event.right && selectedCol < columns - 1) {
-            int newIndex = selectedRow * columns + (selectedCol + 1);
-            if (newIndex < itemCount) {
-                selectedCol++;
-                updateSelectedIndex();
+        if (event.right) {
+            if (selectedCol < columns - 1) {
+                int newIndex = selectedRow * columns + (selectedCol + 1);
+                if (newIndex < itemCount) {
+                    selectedCol++;
+                    updateSelectedIndex();
+                }
             }
             return true;
         }

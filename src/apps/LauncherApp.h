@@ -54,7 +54,7 @@ public:
         batteryManager.forceUpdate();
         
         // 创建主窗口 - 更小的窗口位于左上角
-        mainWindow = uiManager->createWindow(WINDOW_ID, 5, 5, 150, 120, "Launcher", "MainWindow");
+        mainWindow = uiManager->createWindow(WINDOW_ID, 5, 5, 150, 112, "Launcher", "MainWindow");
         
         // 创建电池信息标签 - 位于窗口右上角
         batteryLabel = uiManager->createLabel(BATTERY_LABEL_ID, 100, 10, batteryManager.getBatteryLevelString(), "BatteryInfo", mainWindow);
@@ -69,7 +69,7 @@ public:
         statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 10, 25, "Select app", "Status", mainWindow);
         
         // 创建网格菜单 - 3x2网格布局以显示更多应用
-        gridMenu = new LauncherMenuGrid(GRID_MENU_ID, 10, 40, 140, 72, 3, 2, "AppGrid", this);
+        gridMenu = new LauncherMenuGrid(GRID_MENU_ID, 10, 40, 140, 68, 3, 2, "AppGrid", this);
         gridMenu->setParent(mainWindow);
         uiManager->addWidget(gridMenu);
         
