@@ -1,5 +1,5 @@
-﻿#pragma once
-#include "apps/MusicApp.h"
+#pragma once
+#include "apps/Music/MusicApp.h"
 
 inline void MusicApp::initializeDualCoreAudio() {
     cleanup();
@@ -375,4 +375,3 @@ inline void MusicApp::cleanupAudioTask() {
 
 inline void MusicApp::metadataCallback(void *cbData, const char *type, bool isUnicode, const char *string) {
 }
-

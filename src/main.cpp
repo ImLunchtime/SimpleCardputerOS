@@ -1,12 +1,13 @@
 #include "M5Cardputer.h"
 #include "system/EventSystem.h"
 #include "system/AppManager.h"
-#include "apps/LauncherApp.h"
-#include "apps/MusicApp.h"
-#include "apps/SettingsApp.h"
-#include "apps/TestApp.h"
-#include "apps/FileManagerApp.h"
-#include "apps/ThemeApp.h"
+#include "apps/Launcher/LauncherApp.h"
+#include "apps/Music/MusicApp.h"
+#include "apps/Settings/SettingsApp.h"
+#include "apps/Test/TestApp.h"
+#include "apps/FileManager/FileManagerApp.h"
+#include "apps/Theme/ThemeApp.h"
+#include "apps/Remote/RemoteApp.h"
 #include "themes/ThemeManager.h"
 #include "themes/PrototypeTheme.h"
 #include "themes/DarkTheme.h"
@@ -53,6 +54,7 @@ SettingsApp settingsApp(&globalEventSystem);
 TestApp testApp(&globalEventSystem);
 FileManagerApp fileManagerApp(&globalEventSystem, &globalAppManager);
 ThemeApp themeApp(&globalEventSystem);
+RemoteApp remoteApp(&globalEventSystem);
 
 void setup() {
   // 初始化M5Cardputer
@@ -71,8 +73,8 @@ void setup() {
     globalThemeManager->registerTheme(new DarkTheme());
     globalThemeManager->registerTheme(new Windows98Theme());
     globalThemeManager->registerTheme(new WatercolorTheme());
-    // 设置Dark主题为默认主题
-    globalThemeManager->setCurrentTheme(1);
+    // 设置Prototype主题为默认主题
+    globalThemeManager->setCurrentTheme(0);
   }
   
   // 注册应用到应用管理器
@@ -82,6 +84,7 @@ void setup() {
   //globalAppManager.registerApp("settings", "Settings", &settingsApp);
   globalAppManager.registerApp("filemanager", "Files", &fileManagerApp);
   globalAppManager.registerApp("test", "Test", &testApp);
+  globalAppManager.registerApp("remote", "遥控器", &remoteApp);
   
   // 初始化应用管理器（启动启动器）
   globalAppManager.initialize();

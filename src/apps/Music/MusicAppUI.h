@@ -1,5 +1,5 @@
-﻿#pragma once
-#include "apps/MusicApp.h"
+#pragma once
+#include "apps/Music/MusicApp.h"
 
 inline void MusicApp::scanMusicFiles() {
     if (!isInitialized) return;
@@ -474,4 +474,3 @@ inline void MusicApp::handleMenuSelection(MenuItem* item) {
     
     updateMenuDisplay();
 }
-

@@ -571,6 +571,30 @@ void UIManager::tick() {
     smartRefresh();
 }
 
+void UIManager::setWidgetTreeVisible(UIWidget* root, bool visible) {
+    if (!root) return;
+    for (int i = 0; i < widgetCount; i++) {
+        UIWidget* w = widgets[i];
+        if (!w) continue;
+        UIWidget* p = w;
+        while (p) {
+            if (p == root) {
+                w->setVisible(visible);
+                break;
+            }
+            p = p->getParent();
+        }
+    }
+}
+
+void UIManager::showPage(UIWidget* root) {
+    setWidgetTreeVisible(root, true);
+}
+
+void UIManager::hidePage(UIWidget* root) {
+    setWidgetTreeVisible(root, false);
+}
+
 UILabel* UIManager::createLabel(int id, int x, int y, const String& text, const String& name, UIWidget* parent) {
     UILabel* label = new UILabel(id, x, y, text, name);
     label->setParent(parent ? parent : rootScreen);

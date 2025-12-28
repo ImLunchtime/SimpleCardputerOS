@@ -1,5 +1,5 @@
-﻿#pragma once
-#include "apps/MusicApp.h"
+#pragma once
+#include "apps/Music/MusicApp.h"
 
 inline void MusicApp::prepareLyricsForCurrentSong() {
     clearLyrics();
@@ -181,4 +181,3 @@ inline void MusicApp::updateLyricsDisplay() {
         uiManager->refreshAppArea();
     }
 }
-

@@ -18,16 +18,17 @@ struct AppInfo {
 
 class AppManager {
 private:
-    AppInfo* apps[10];      // 最多支持10个应用
+    AppInfo* apps[10];
     int appCount;
     App* currentApp;
     App* launcherApp;
     EventSystem* eventSystem;
     UIManager* globalUIManager;
     SDFileManager* globalSDManager;
+    bool globalEscEnabled;
     
 public:
-    AppManager(EventSystem* events) : appCount(0), currentApp(nullptr), launcherApp(nullptr), eventSystem(events) {
+    AppManager(EventSystem* events) : appCount(0), currentApp(nullptr), launcherApp(nullptr), eventSystem(events), globalEscEnabled(true) {
         for (int i = 0; i < 10; i++) {
             apps[i] = nullptr;
         }
@@ -47,6 +48,14 @@ public:
 
     SDFileManager* getSDFileManager() {
         return globalSDManager;
+    }
+
+    void setGlobalEscEnabled(bool enabled) {
+        globalEscEnabled = enabled;
+    }
+
+    bool isGlobalEscEnabled() const {
+        return globalEscEnabled;
     }
 
     bool initializeSD() {
@@ -125,6 +134,7 @@ public:
             // 使用全局UI管理器切换到启动器（保持背景层）
             globalUIManager->switchToLauncher();
             currentApp = launcherApp;
+            globalEscEnabled = true;
             // 不需要重新setup，因为启动器窗口已经在背景层
         }
     }
@@ -147,7 +157,7 @@ public:
     // 处理键盘事件
     void handleKeyEvent(const KeyEvent& event) {
         // 全局ESC键处理：如果当前不是启动器应用，ESC键退出到启动器
-        if (event.esc && currentApp && currentApp != launcherApp) {
+        if (event.esc && globalEscEnabled && currentApp && currentApp != launcherApp) {
             returnToLauncher();
             return;
         }

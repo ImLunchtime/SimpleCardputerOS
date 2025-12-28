@@ -8,6 +8,7 @@
 #include "assets/icon_music_sd.h"
 #include "assets/icon_test.h"
 #include "assets/icon_theme.h"
+#include "assets/icon_remote.h"
 
 class LauncherApp : public App {
 private:
@@ -173,6 +174,9 @@ private:
                 added = true;
             } else if (name == "theme" || display == "Theme") {
                 gridMenu->addImageItem(icon_theme_png, icon_theme_png_size, itemId);
+                added = true;
+            } else if (name == "remote" || display == "遥控器" || display == "Remote") {
+                gridMenu->addImageItem(icon_remote, icon_remote_size, itemId);
                 added = true;
             }
 

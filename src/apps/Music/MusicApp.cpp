@@ -1,7 +1,7 @@
-#include "apps/MusicApp.h"
-#include "apps/MusicAppPlayback.h"
-#include "apps/MusicAppLyrics.h"
-#include "apps/MusicAppUI.h"
+#include "apps/Music/MusicApp.h"
+#include "apps/Music/MusicAppPlayback.h"
+#include "apps/Music/MusicAppLyrics.h"
+#include "apps/Music/MusicAppUI.h"
 
 MusicApp::MusicApp(EventSystem* events, AppManager* manager) 
     : eventSystem(events), appManager(manager), 
