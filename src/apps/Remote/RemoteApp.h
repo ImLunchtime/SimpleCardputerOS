@@ -5,6 +5,10 @@
 #include "system/EventSystem.h"
 #include "system/AppManager.h"
 #include "assets/remote_rover_keyboard_tips.h"
+#include <WiFi.h>
+#include <esp_now.h>
+#include <esp_wifi.h>
+#include <cstring>
 
 class RemoteApp : public App {
 private:
@@ -26,6 +30,9 @@ private:
     UIWindow* remoteWindow;
     UIImage* tipsImage;
 
+    bool espNowInitialized;
+    uint8_t broadcastAddress[6];
+
     class RemoteMenuList : public UIMenuList {
     public:
         RemoteMenuList(int id, int x, int y, int width, int height, const String& name, int itemHeight, RemoteApp* app)
@@ -46,7 +53,15 @@ public:
           remoteMenu(nullptr),
           menuWindow(nullptr),
           remoteWindow(nullptr),
-          tipsImage(nullptr) {}
+          tipsImage(nullptr),
+          espNowInitialized(false) {
+        broadcastAddress[0] = 0xFF;
+        broadcastAddress[1] = 0xFF;
+        broadcastAddress[2] = 0xFF;
+        broadcastAddress[3] = 0xFF;
+        broadcastAddress[4] = 0xFF;
+        broadcastAddress[5] = 0xFF;
+    }
 
     void setup() override {
         menuWindow = uiManager->createWindow(MENU_WINDOW_ID, 30, 20, 180, 100, "Remote", "RemoteMenuWindow");
@@ -82,6 +97,10 @@ public:
                 return;
             }
         }
+        if (remoteWindow && remoteWindow->isVisible()) {
+            handleRemoteKeyEvent(event);
+            return;
+        }
         if (uiManager->handleKeyEvent(event)) {
             uiManager->refreshAppArea();
         }
@@ -102,6 +121,7 @@ public:
             appManager->setGlobalEscEnabled(false);
         }
         uiManager->refresh();
+        sendEspNowCommand("C_ST");
     }
 
     void showMenuView() {
@@ -109,6 +129,81 @@ public:
         uiManager->hidePage(remoteWindow);
         uiManager->showPage(menuWindow);
         uiManager->refresh();
+    }
+
+private:
+    void initEspNow() {
+        if (espNowInitialized) {
+            return;
+        }
+        WiFi.mode(WIFI_STA);
+        esp_wifi_set_channel(1, WIFI_SECOND_CHAN_NONE);
+        if (esp_now_init() != ESP_OK) {
+            return;
+        }
+        esp_now_peer_info_t peerInfo = {};
+        for (int i = 0; i < 6; i++) {
+            peerInfo.peer_addr[i] = broadcastAddress[i];
+        }
+        peerInfo.channel = 1;
+        peerInfo.encrypt = false;
+        if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+            return;
+        }
+        espNowInitialized = true;
+    }
+
+    void sendEspNowCommand(const char* cmd) {
+        if (!cmd) return;
+        initEspNow();
+        if (!espNowInitialized) return;
+        size_t len = std::strlen(cmd);
+        if (len == 0) return;
+        esp_now_send(broadcastAddress, reinterpret_cast<const uint8_t*>(cmd), len);
+    }
+
+    void handleRemoteKeyEvent(const KeyEvent& event) {
+        if (!event.text.isEmpty()) {
+            char key = event.text.charAt(0);
+            if (key >= 'a' && key <= 'z') {
+                key = static_cast<char>(key - 'a' + 'A');
+            }
+            if (key == 'E') {
+                sendEspNowCommand("C_FD");
+                return;
+            }
+            if (key == 'A') {
+                sendEspNowCommand("C_LS");
+                return;
+            }
+            if (key == 'S') {
+                sendEspNowCommand("C_BK");
+                return;
+            }
+            if (key == 'D') {
+                sendEspNowCommand("C_RS");
+                return;
+            }
+            if (key == 'K') {
+                sendEspNowCommand("C_TL");
+                return;
+            }
+            if (key == 'L') {
+                sendEspNowCommand("C_TR");
+                return;
+            }
+        }
+        if (event.text.isEmpty() &&
+            !event.enter &&
+            !event.del &&
+            !event.tab &&
+            !event.up &&
+            !event.down &&
+            !event.left &&
+            !event.right &&
+            !event.esc) {
+            sendEspNowCommand("C_ST");
+        }
     }
 };
 

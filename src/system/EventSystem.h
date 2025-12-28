@@ -16,41 +16,38 @@ struct KeyEvent {
 class EventSystem {
 public:
     bool hasKeyEvent(KeyEvent& event) {
-        if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
-            // 关键：先更新键盘状态
-            M5Cardputer.Keyboard.updateKeysState();
-            Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
-            
-            // 初始化事件
-            event.text = "";
-            event.enter = status.enter;
-            event.del = status.del;
-            event.tab = status.tab;
-            event.up = false;
-            event.down = false;
-            event.left = false;
-            event.right = false;
-            event.esc = false;
-            
-            // 构建文本字符串并检测方向键和ESC键
-            for (char c : status.word) {
-                if (c == ';') {
-                    event.up = true;
-                } else if (c == '.') {
-                    event.down = true;
-                } else if (c == ',') {
-                    event.left = true;
-                } else if (c == '/') {
-                    event.right = true;
-                } else if (c == '`') {
-                    event.esc = true;  // 使用"`"字符作为ESC键
-                } else {
-                    event.text += c;  // 只有非方向键和非ESC键字符才加入text
-                }
-            }
-            
-            return true;
+        if (!M5Cardputer.Keyboard.isChange()) {
+            return false;
         }
-        return false;
+        M5Cardputer.Keyboard.updateKeysState();
+        Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
+
+        event.text = "";
+        event.enter = status.enter;
+        event.del = status.del;
+        event.tab = status.tab;
+        event.up = false;
+        event.down = false;
+        event.left = false;
+        event.right = false;
+        event.esc = false;
+
+        for (char c : status.word) {
+            if (c == ';') {
+                event.up = true;
+            } else if (c == '.') {
+                event.down = true;
+            } else if (c == ',') {
+                event.left = true;
+            } else if (c == '/') {
+                event.right = true;
+            } else if (c == '`') {
+                event.esc = true;
+            } else {
+                event.text += c;
+            }
+        }
+
+        return true;
     }
 };
