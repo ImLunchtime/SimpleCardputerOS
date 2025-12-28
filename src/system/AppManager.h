@@ -26,6 +26,122 @@ private:
     UIManager* globalUIManager;
     SDFileManager* globalSDManager;
     bool globalEscEnabled;
+    static constexpr int BRIGHTNESS_PANEL_ID = -2000;
+    static constexpr int BRIGHTNESS_SLIDER_ID = -2001;
+    class BrightnessSlider : public UISlider {
+    public:
+        BrightnessSlider(int id, int x, int y, int width, int height, const String& name)
+            : UISlider(id, x, y, width, height, 5, 100, 50, "Brightness", name) {}
+        void onValueChanged(int newValue) override {
+            int brightness = (newValue * 255) / 100;
+            if (brightness < 0) brightness = 0;
+            if (brightness > 255) brightness = 255;
+            M5Cardputer.Display.setBrightness(brightness);
+        }
+    };
+    void ensureBrightnessMenuWidgets() {
+        if (!globalUIManager) return;
+        UIWidget* panelWidget = globalUIManager->getWidget(BRIGHTNESS_PANEL_ID);
+        UIPanel* panel = panelWidget ? static_cast<UIPanel*>(panelWidget) : nullptr;
+        UIWidget* sliderWidget = globalUIManager->getWidget(BRIGHTNESS_SLIDER_ID);
+        UISlider* sliderBase = sliderWidget ? static_cast<UISlider*>(sliderWidget) : nullptr;
+        if (!panel) {
+            int screenW = M5Cardputer.Display.width();
+            int screenH = M5Cardputer.Display.height();
+            if (screenW <= 0) screenW = 240;
+            if (screenH <= 0) screenH = 135;
+            int panelW = screenW - 60;
+            if (panelW < 100) panelW = screenW - 20;
+            int panelH = 40;
+            int panelX = (screenW - panelW) / 2;
+            int panelY = (screenH - panelH) / 2;
+            panel = globalUIManager->createPanel(BRIGHTNESS_PANEL_ID, panelX, panelY, panelW, panelH, "BrightnessPanel");
+            panel->setBackgroundColor(TFT_BLACK);
+            panel->setBorderColor(TFT_WHITE);
+        }
+        if (!sliderBase && panel) {
+            int panelX, panelY, panelW, panelH;
+            panel->getBounds(panelX, panelY, panelW, panelH);
+            int sliderW = panelW - 20;
+            int sliderH = panelH - 16;
+            if (sliderH < 12) sliderH = panelH - 8;
+            if (sliderH < 8) sliderH = panelH;
+            int sliderX = 10;
+            int sliderY = (panelH - sliderH) / 2;
+            BrightnessSlider* slider = new BrightnessSlider(BRIGHTNESS_SLIDER_ID, sliderX, sliderY, sliderW, sliderH, "BrightnessSlider");
+            slider->setParent(panel);
+            globalUIManager->addWidget(slider);
+            slider->onValueChanged(slider->getValue());
+        }
+        panelWidget = globalUIManager->getWidget(BRIGHTNESS_PANEL_ID);
+        sliderWidget = globalUIManager->getWidget(BRIGHTNESS_SLIDER_ID);
+        panel = panelWidget ? static_cast<UIPanel*>(panelWidget) : nullptr;
+        sliderBase = sliderWidget ? static_cast<UISlider*>(sliderWidget) : nullptr;
+        if (panel) {
+            globalUIManager->ensureForeground(panel);
+        }
+        if (sliderBase) {
+            globalUIManager->ensureForeground(sliderBase);
+        }
+        if (panel) {
+            globalUIManager->setWidgetTreeVisible(panel, false);
+        }
+    }
+    bool handleBrightnessMenuKeyEvent(const KeyEvent& event) {
+        if (!globalUIManager) return false;
+        UIWidget* panelWidget = globalUIManager->getWidget(BRIGHTNESS_PANEL_ID);
+        UIPanel* panel = panelWidget ? static_cast<UIPanel*>(panelWidget) : nullptr;
+        UIWidget* sliderWidget = globalUIManager->getWidget(BRIGHTNESS_SLIDER_ID);
+        UISlider* slider = sliderWidget ? static_cast<UISlider*>(sliderWidget) : nullptr;
+        bool panelVisible = panel && panel->isVisible();
+        if (event.opt) {
+            if (!panel || !slider) {
+                ensureBrightnessMenuWidgets();
+                panelWidget = globalUIManager->getWidget(BRIGHTNESS_PANEL_ID);
+                panel = panelWidget ? static_cast<UIPanel*>(panelWidget) : nullptr;
+                sliderWidget = globalUIManager->getWidget(BRIGHTNESS_SLIDER_ID);
+                slider = sliderWidget ? static_cast<UISlider*>(sliderWidget) : nullptr;
+            }
+            if (panel) {
+                globalUIManager->ensureForeground(panel);
+            }
+            if (slider) {
+                globalUIManager->ensureForeground(slider);
+            }
+            if (panel) {
+                bool currentlyVisible = panel->isVisible();
+                globalUIManager->setWidgetTreeVisible(panel, !currentlyVisible);
+                globalUIManager->rebuildForegroundFocus();
+                globalUIManager->smartRefresh();
+            }
+            return true;
+        }
+        if (panelVisible && slider) {
+            bool handled = false;
+            int value = slider->getValue();
+            if (event.left) {
+                value -= 5;
+                if (value < 5) value = 5;
+                slider->setValue(value);
+                handled = true;
+            } else if (event.right) {
+                value += 5;
+                if (value > 100) value = 100;
+                slider->setValue(value);
+                handled = true;
+            }
+            if (event.enter || event.esc) {
+                globalUIManager->setWidgetTreeVisible(panel, false);
+                globalUIManager->rebuildForegroundFocus();
+                globalUIManager->smartRefresh();
+                handled = true;
+            }
+            if (handled) {
+                return true;
+            }
+        }
+        return false;
+    }
     
 public:
     AppManager(EventSystem* events) : appCount(0), currentApp(nullptr), launcherApp(nullptr), eventSystem(events), globalEscEnabled(true) {
@@ -156,6 +272,9 @@ public:
     
     // 处理键盘事件
     void handleKeyEvent(const KeyEvent& event) {
+        if (handleBrightnessMenuKeyEvent(event)) {
+            return;
+        }
         // 全局ESC键处理：如果当前不是启动器应用，ESC键退出到启动器
         if (event.esc && globalEscEnabled && currentApp && currentApp != launcherApp) {
             returnToLauncher();

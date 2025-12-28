@@ -717,6 +717,21 @@ void UIManager::rebuildFocusListForBackground() {
     }
 }
 
+void UIManager::ensureForeground(UIWidget* widget) {
+    if (!widget) return;
+    if (!hasBackgroundLayer) return;
+    for (int i = 0; i < foregroundWidgetCount; i++) {
+        if (foregroundWidgets[i] == widget) {
+            rebuildFocusListForForeground();
+            return;
+        }
+    }
+    if (foregroundWidgetCount >= 20) return;
+    foregroundWidgets[foregroundWidgetCount] = widget;
+    foregroundWidgetCount++;
+    rebuildFocusListForForeground();
+}
+
 void UIManager::rebuildFocusListForForeground() {
     focusableCount = 0;
     currentFocus = -1;
@@ -726,7 +741,7 @@ void UIManager::rebuildFocusListForForeground() {
         }
     }
     for (int i = 0; i < foregroundWidgetCount; i++) {
-        if (foregroundWidgets[i] && foregroundWidgets[i]->isFocusable()) {
+        if (foregroundWidgets[i] && foregroundWidgets[i]->isFocusable() && foregroundWidgets[i]->isVisible()) {
             for (int j = 0; j < widgetCount; j++) {
                 if (widgets[j] == foregroundWidgets[i]) {
                     focusableWidgets[focusableCount] = j;
@@ -737,6 +752,30 @@ void UIManager::rebuildFocusListForForeground() {
                     }
                     break;
                 }
+            }
+        }
+    }
+}
+
+void UIManager::rebuildForegroundFocus() {
+    if (hasBackgroundLayer) {
+        rebuildFocusListForForeground();
+        return;
+    }
+    focusableCount = 0;
+    currentFocus = -1;
+    for (int i = 0; i < widgetCount; i++) {
+        if (widgets[i]) {
+            widgets[i]->setFocused(false);
+        }
+    }
+    for (int i = 0; i < widgetCount; i++) {
+        if (widgets[i] && widgets[i]->isFocusable() && widgets[i]->isVisible()) {
+            focusableWidgets[focusableCount] = i;
+            focusableCount++;
+            if (currentFocus == -1) {
+                currentFocus = 0;
+                widgets[i]->setFocused(true);
             }
         }
     }

@@ -47,6 +47,8 @@ public:
     void setWidgetTreeVisible(UIWidget* root, bool visible);
     void showPage(UIWidget* root);
     void hidePage(UIWidget* root);
+    void ensureForeground(UIWidget* widget);
+    void rebuildForegroundFocus();
     UILabel* createLabel(int id, int x, int y, const String& text, const String& name = "", UIWidget* parent = nullptr);
     UIButton* createButton(int id, int x, int y, int width, int height, const String& text, const String& name = "", UIWidget* parent = nullptr);
     UIButton* createImageButton(int id, int x, int y, int width, int height, const uint8_t* imageData, size_t dataSize, const String& name = "", UIWidget* parent = nullptr);

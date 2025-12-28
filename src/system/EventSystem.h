@@ -4,6 +4,7 @@
 struct KeyEvent {
     String text;
     bool enter;
+    bool opt;
     bool del;
     bool tab;
     bool up;      // ";" 键
@@ -24,6 +25,7 @@ public:
 
         event.text = "";
         event.enter = status.enter;
+        event.opt = status.opt;
         event.del = status.del;
         event.tab = status.tab;
         event.up = false;
