@@ -70,7 +70,7 @@ public:
         statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 10, 25, "Select app", "Status", mainWindow);
         
         // 创建网格菜单 - 3x2网格布局以显示更多应用
-        gridMenu = new LauncherMenuGrid(GRID_MENU_ID, 10, 40, 140, 68, 3, 2, "AppGrid", this);
+        gridMenu = new LauncherMenuGrid(GRID_MENU_ID, 10, 40, 140, 76, 3, 2, "AppGrid", this);
         gridMenu->setParent(mainWindow);
         uiManager->addWidget(gridMenu);
         
@@ -175,7 +175,7 @@ private:
             } else if (name == "theme" || display == "Theme") {
                 gridMenu->addImageItem(icon_theme_png, icon_theme_png_size, itemId);
                 added = true;
-            } else if (name == "remote" || display == "遥控器" || display == "Remote") {
+            } else if (name == "remote" || display == "Remote" || display == "Remote") {
                 gridMenu->addImageItem(icon_remote, icon_remote_size, itemId);
                 added = true;
             }

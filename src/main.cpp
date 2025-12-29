@@ -84,7 +84,7 @@ void setup() {
   //globalAppManager.registerApp("settings", "Settings", &settingsApp);
   globalAppManager.registerApp("filemanager", "Files", &fileManagerApp);
   globalAppManager.registerApp("test", "Test", &testApp);
-  globalAppManager.registerApp("remote", "遥控器", &remoteApp);
+  globalAppManager.registerApp("remote", "Remote", &remoteApp);
   
   // 初始化应用管理器（启动启动器）
   globalAppManager.initialize();
