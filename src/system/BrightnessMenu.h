@@ -2,6 +2,8 @@
 #include <M5Cardputer.h>
 #include "ui/UIManager.h"
 
+extern int g_displayBrightness;
+
 class BrightnessMenu {
 private:
     UIManager* uiManager;
@@ -16,6 +18,7 @@ private:
             if (brightness < 0) brightness = 0;
             if (brightness > 255) brightness = 255;
             M5Cardputer.Display.setBrightness(brightness);
+            g_displayBrightness = brightness;
         }
     };
     void ensureWidgets() {
@@ -127,4 +130,3 @@ public:
         return false;
     }
 };
-

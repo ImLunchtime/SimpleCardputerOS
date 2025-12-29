@@ -14,6 +14,9 @@
 #include "themes/Windows98Theme.h"
 #include "themes/WatercolorTheme.h"
 
+int g_displayBrightness = 128;
+bool g_isSleeping = false;
+
 /*
  *                        _oo0oo_
  *                       o8888888o
@@ -57,51 +60,55 @@ ThemeApp themeApp(&globalEventSystem);
 RemoteApp remoteApp(&globalEventSystem);
 
 void setup() {
-  // 初始化M5Cardputer
   auto cfg = M5.config();
-  M5Cardputer.begin(cfg, true);  // 启用键盘
-  
-  // 设置显示器
+  M5Cardputer.begin(cfg, true);
+
   M5Cardputer.Display.setRotation(1);
   M5Cardputer.Display.setTextSize(1);
-  
+  M5Cardputer.Display.setBrightness(g_displayBrightness);
+
   globalAppManager.initializeSD();
-  
-  // 初始化主题系统并设置默认主题
+
   if (globalThemeManager) {
     globalThemeManager->registerTheme(new PrototypeTheme());
     globalThemeManager->registerTheme(new DarkTheme());
     globalThemeManager->registerTheme(new Windows98Theme());
     globalThemeManager->registerTheme(new WatercolorTheme());
-    // 设置Prototype主题为默认主题
     globalThemeManager->setCurrentTheme(0);
   }
-  
-  // 注册应用到应用管理器
-  globalAppManager.registerApp("launcher", "Launcher", &launcherApp, true);  // 启动器
+
+  globalAppManager.registerApp("launcher", "Launcher", &launcherApp, true);
   globalAppManager.registerApp("theme", "Theme", &themeApp);
   globalAppManager.registerApp("music", "Music", &musicApp);
   //globalAppManager.registerApp("settings", "Settings", &settingsApp);
   globalAppManager.registerApp("filemanager", "Files", &fileManagerApp);
   globalAppManager.registerApp("test", "Test", &testApp);
   globalAppManager.registerApp("remote", "Remote", &remoteApp);
-  
-  // 初始化应用管理器（启动启动器）
+
   globalAppManager.initialize();
 }
 
 void loop() {
-  // 更新键盘状态
+  M5Cardputer.update();
+
+  if (M5Cardputer.BtnA.wasPressed()) {
+    if (g_isSleeping) {
+      M5Cardputer.Display.setBrightness(g_displayBrightness);
+      g_isSleeping = false;
+    } else {
+      M5Cardputer.Display.setBrightness(0);
+      g_isSleeping = true;
+    }
+  }
+
   M5Cardputer.Keyboard.updateKeyList();
-  
-  // 检查键盘事件
+
   KeyEvent event;
   if (globalEventSystem.hasKeyEvent(event)) {
     globalAppManager.handleKeyEvent(event);
   }
-  
-  // 更新当前App
+
   globalAppManager.update();
-  
+
   delay(10);
 }
