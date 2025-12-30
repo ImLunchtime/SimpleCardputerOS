@@ -46,7 +46,7 @@ public:
         statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 35, 35, "Select a setting", "Status", mainWindow);
         
         // 创建设置菜单（设置父为主窗口）
-        settingsMenu = new SettingsMenuList(MENU_LIST_ID, 35, 45, 120, 40, "SettingsMenu", 10, this);
+        settingsMenu = new SettingsMenuList(MENU_LIST_ID, 35, 45, 120, 40, "SettingsMenu", 14, this);
         settingsMenu->setParent(mainWindow);
         uiManager->addWidget(settingsMenu);
         

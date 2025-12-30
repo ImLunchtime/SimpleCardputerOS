@@ -55,7 +55,7 @@ public:
         uiManager->addWidget(previewLabel);
         
         // 创建主题菜单 - 更紧凑的尺寸（设置父为主窗口）
-        themeMenu = new ThemeMenuList(4, 35, 55, 150, 50, "ThemeMenu", 12, this);
+        themeMenu = new ThemeMenuList(4, 35, 55, 150, 50, "ThemeMenu", 16, this);
         themeMenu->setParent(mainWindow);
         
         // 添加主题选项

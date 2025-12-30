@@ -5,6 +5,7 @@
 #include "ui/UIManager.h"
 #include "system/SDFileManager.h"
 #include "system/BrightnessMenu.h"
+#include "system/SleepManager.h"
 
 // 应用信息结构
 struct AppInfo {
@@ -153,17 +154,19 @@ public:
         if (currentApp) {
             currentApp->loop();
         }
-        if (globalUIManager) {
+        if (globalUIManager && !globalSleepManager.isSleeping()) {
             globalUIManager->tick();
         }
     }
     
     // 处理键盘事件
     void handleKeyEvent(const KeyEvent& event) {
+        if (globalSleepManager.isSleeping()) {
+            return;
+        }
         if (brightnessMenu && brightnessMenu->handleKeyEvent(event)) {
             return;
         }
-        // 全局ESC键处理：如果当前不是启动器应用，ESC键退出到启动器
         if (event.esc && globalEscEnabled && currentApp && currentApp != launcherApp) {
             returnToLauncher();
             return;

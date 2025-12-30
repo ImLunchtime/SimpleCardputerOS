@@ -13,9 +13,11 @@
 #include "themes/DarkTheme.h"
 #include "themes/Windows98Theme.h"
 #include "themes/WatercolorTheme.h"
+#include "themes/OrangeTheme.h"
+#include "system/SleepManager.h"
 
 int g_displayBrightness = 128;
-bool g_isSleeping = false;
+SleepManager globalSleepManager;
 
 /*
  *                        _oo0oo_
@@ -74,7 +76,8 @@ void setup() {
     globalThemeManager->registerTheme(new DarkTheme());
     globalThemeManager->registerTheme(new Windows98Theme());
     globalThemeManager->registerTheme(new WatercolorTheme());
-    globalThemeManager->setCurrentTheme(0);
+    globalThemeManager->registerTheme(new OrangeTheme());
+    globalThemeManager->setCurrentTheme("Orange");
   }
 
   globalAppManager.registerApp("launcher", "Launcher", &launcherApp, true);
@@ -92,12 +95,14 @@ void loop() {
   M5Cardputer.update();
 
   if (M5Cardputer.BtnA.wasPressed()) {
-    if (g_isSleeping) {
+    if (globalSleepManager.isSleeping()) {
       M5Cardputer.Display.setBrightness(g_displayBrightness);
-      g_isSleeping = false;
+      globalSleepManager.leaveSleep();
     } else {
-      M5Cardputer.Display.setBrightness(0);
-      g_isSleeping = true;
+      int sleepBrightness = (255 * 5) / 100;
+      if (sleepBrightness < 1) sleepBrightness = 1;
+      M5Cardputer.Display.setBrightness(sleepBrightness);
+      globalSleepManager.enterSleep();
     }
   }
 
@@ -109,6 +114,7 @@ void loop() {
   }
 
   globalAppManager.update();
+  globalSleepManager.tick();
 
   delay(10);
 }

@@ -198,7 +198,7 @@ private:
     class MusicMenuList : public UIMenuList {
     public:
         MusicMenuList(int id, int x, int y, int width, int height, const String& name, int itemHeight, MusicApp* app)
-            : UIMenuList(id, x, y, width, height, name, 14), parentApp(app) {}
+            : UIMenuList(id, x, y, width, height, name, 18), parentApp(app) {}
         
         void onItemSelected(MenuItem* item) override {
             parentApp->handleMenuSelection(item);

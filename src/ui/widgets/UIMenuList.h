@@ -33,7 +33,7 @@ private:
         invalidate();
     }
 public:
-    UIMenuList(int id, int x, int y, int width, int height, const String& name = "", int _itemHeight = 14)
+    UIMenuList(int id, int x, int y, int width, int height, const String& name = "", int _itemHeight = 18)
         : UIMenu(id, WIDGET_MENU_LIST, x, y, width, height, name),
           itemHeight(_itemHeight), scrollOffset(0), scrollPixel(0.0f), targetScrollPixel(0.0f), lastAnimMs(0), animating(false) {
         visibleItems = (height - 4) / itemHeight;
