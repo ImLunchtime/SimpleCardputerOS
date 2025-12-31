@@ -9,6 +9,7 @@
 #include "assets/icon_test.h"
 #include "assets/icon_theme.h"
 #include "assets/icon_remote.h"
+#include "assets/icon_settings.h"
 
 class LauncherApp : public App {
 private:
@@ -175,6 +176,9 @@ private:
                 added = true;
             } else if (name == "remote" || display == "Remote" || display == "Remote") {
                 gridMenu->addImageItem(icon_remote, icon_remote_size, itemId);
+                added = true;
+            } else if (name == "settings" || display == "Settings") {
+                gridMenu->addImageItem(icon_settings, icon_settings_size, itemId);
                 added = true;
             }
 

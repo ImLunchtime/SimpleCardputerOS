@@ -83,7 +83,7 @@ void setup() {
   globalAppManager.registerApp("launcher", "Launcher", &launcherApp, true);
   globalAppManager.registerApp("theme", "Theme", &themeApp);
   globalAppManager.registerApp("music", "Music", &musicApp);
-  //globalAppManager.registerApp("settings", "Settings", &settingsApp);
+  globalAppManager.registerApp("settings", "Settings", &settingsApp);
   globalAppManager.registerApp("filemanager", "Files", &fileManagerApp);
   globalAppManager.registerApp("test", "Test", &testApp);
   globalAppManager.registerApp("remote", "Remote", &remoteApp);
