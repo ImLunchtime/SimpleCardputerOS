@@ -49,7 +49,7 @@ struct MusicAudioStatus {
     char errorMessage[128];
 };
 
-// 音乐分类结构
+    // 音乐分类结构
 struct MusicTrack {
     String artist;
     String album;
@@ -273,6 +273,12 @@ private:
     String lastDisplayedCurrent;
     String lastDisplayedNext;
 
+    TaskHandle_t scanTaskHandle;
+    bool scanInProgress;
+    bool scanCompleted;
+    bool scanFailed;
+    bool menuBuilt;
+
 public:
     MusicApp(EventSystem* events, AppManager* manager);
     ~MusicApp();
@@ -339,4 +345,5 @@ private:
     
     // 静态回调函数
     static void metadataCallback(void *cbData, const char *type, bool isUnicode, const char *string);
+    static void scanMusicTaskFunction(void* parameter);
 };

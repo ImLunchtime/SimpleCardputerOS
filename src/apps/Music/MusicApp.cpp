@@ -8,7 +8,8 @@ MusicApp::MusicApp(EventSystem* events, AppManager* manager)
       audioFile(nullptr), audioOutput(nullptr), mp3Generator(nullptr), id3Source(nullptr),
       isPlaying(false), isPaused(false), isInitialized(false), pausedPosition(0),
       currentVolume(10), musicFileCount(0), currentFileIndex(0),
-      audioTaskHandle(nullptr), audioCommandQueue(nullptr), audioStatusMutex(nullptr) {
+      audioTaskHandle(nullptr), audioCommandQueue(nullptr), audioStatusMutex(nullptr),
+      scanTaskHandle(nullptr), scanInProgress(false), scanCompleted(false), scanFailed(false), menuBuilt(false) {
     uiManager = appManager->getUIManager();
     
     memset(&audioStatus, 0, sizeof(audioStatus));
@@ -60,6 +61,11 @@ MusicApp::~MusicApp() {
     if (audioStatusMutex) {
         vSemaphoreDelete(audioStatusMutex);
         audioStatusMutex = nullptr;
+    }
+    
+    if (scanTaskHandle) {
+        vTaskDelete(scanTaskHandle);
+        scanTaskHandle = nullptr;
     }
     
     clearMusicData();
@@ -136,8 +142,6 @@ void MusicApp::setup() {
     
     scanMusicFiles();
     
-    buildMainMenu();
-    
     showListView();
 }
 
@@ -148,6 +152,25 @@ void MusicApp::loop() {
     
     updateUIFromAudioStatus();
     updateLyricsDisplay();
+    
+    if (!menuBuilt && !scanInProgress && (scanCompleted || scanFailed)) {
+        TipManager* tip = appManager ? appManager->getTipManager() : nullptr;
+        if (tip) {
+            tip->closeTip();
+        }
+        if (scanFailed) {
+            songLabel->setText("Scan failed");
+        } else if (musicFileCount <= 0) {
+            songLabel->setText("No MP3 files found");
+        } else {
+            songLabel->setText("Found " + String(musicFileCount) + " music files");
+            currentFileIndex = 0;
+            updateSongInfo();
+        }
+        buildMainMenu();
+        menuBuilt = true;
+        uiManager->refreshAppArea();
+    }
 }
 
 void MusicApp::onKeyEvent(const KeyEvent& event) {
@@ -168,6 +191,11 @@ void MusicApp::onKeyEvent(const KeyEvent& event) {
             if (audioStatusMutex) {
                 vSemaphoreDelete(audioStatusMutex);
                 audioStatusMutex = nullptr;
+            }
+            if (scanTaskHandle) {
+                vTaskDelete(scanTaskHandle);
+                scanTaskHandle = nullptr;
+                scanInProgress = false;
             }
             clearMusicData();
             cleanup();

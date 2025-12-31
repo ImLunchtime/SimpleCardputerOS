@@ -1,32 +1,79 @@
 #pragma once
 #include "apps/Music/MusicApp.h"
+#include "system/TipManager.h"
 
 inline void MusicApp::scanMusicFiles() {
     if (!isInitialized) return;
-    
-    songLabel->setText("Scanning for music files...");
-    drawInterface();
+    if (scanInProgress) return;
     
     clearMusicData();
-    
     musicFileCount = 0;
-    {
-        SDFileManager* fm = appManager->getSDFileManager();
-        if (fm) fm->scanAllFiles(musicFiles, musicFileCount, MAX_MUSIC_FILES, ".mp3");
+    currentFileIndex = 0;
+    menuBuilt = false;
+    scanCompleted = false;
+    scanFailed = false;
+    
+    TipManager* tip = appManager ? appManager->getTipManager() : nullptr;
+    if (tip) {
+        tip->showTwoLabel("Scanning Files,", "Please wait...", 0, false);
+    } else {
+        songLabel->setText("Scanning for music files...");
+        drawInterface();
     }
     
-    if (musicFileCount > 0) {
-        songLabel->setText("Categorizing music files...");
+    scanInProgress = true;
+    
+    BaseType_t result = xTaskCreatePinnedToCore(
+        MusicApp::scanMusicTaskFunction,
+        "MusicScanTask",
+        8192,
+        this,
+        1,
+        &scanTaskHandle,
+        0
+    );
+    
+    if (result != pdPASS) {
+        scanInProgress = false;
+        scanFailed = true;
+        scanTaskHandle = nullptr;
+        if (tip) {
+            tip->closeTip();
+        }
+        songLabel->setText("Failed to start scan");
         drawInterface();
-        
-        categorizeMusic();
-        
-        songLabel->setText("Found " + String(musicFileCount) + " music files");
-        currentFileIndex = 0;
-        updateSongInfo();
-    } else {
-        songLabel->setText("No MP3 files found");
     }
+}
+
+inline void MusicApp::scanMusicTaskFunction(void* parameter) {
+    MusicApp* app = static_cast<MusicApp*>(parameter);
+    if (!app) {
+        vTaskDelete(nullptr);
+        return;
+    }
+    
+    bool ok = false;
+    int count = 0;
+    SDFileManager* fm = app->appManager ? app->appManager->getSDFileManager() : nullptr;
+    if (fm) {
+        ok = fm->scanAllFiles(app->musicFiles, count, MusicApp::MAX_MUSIC_FILES, ".mp3");
+    }
+    
+    if (ok) {
+        app->musicFileCount = count;
+        if (app->musicFileCount > 0) {
+            app->categorizeMusic();
+        }
+    } else {
+        app->musicFileCount = 0;
+    }
+    
+    app->scanInProgress = false;
+    app->scanCompleted = ok;
+    app->scanFailed = !ok;
+    app->scanTaskHandle = nullptr;
+    
+    vTaskDelete(nullptr);
 }
 
 inline void MusicApp::playCurrentSong() {
