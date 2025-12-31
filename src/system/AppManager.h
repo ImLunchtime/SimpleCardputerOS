@@ -4,7 +4,6 @@
 #include "system/EventSystem.h"
 #include "ui/UIManager.h"
 #include "system/SDFileManager.h"
-#include "system/BrightnessMenu.h"
 #include "system/SleepManager.h"
 #include "system/TipManager.h"
 
@@ -29,17 +28,15 @@ private:
     UIManager* globalUIManager;
     SDFileManager* globalSDManager;
     bool globalEscEnabled;
-    BrightnessMenu* brightnessMenu;
     TipManager* tipManager;
     
 public:
-    AppManager(EventSystem* events) : appCount(0), currentApp(nullptr), launcherApp(nullptr), eventSystem(events), globalEscEnabled(true), brightnessMenu(nullptr), tipManager(nullptr) {
+    AppManager(EventSystem* events) : appCount(0), currentApp(nullptr), launcherApp(nullptr), eventSystem(events), globalEscEnabled(true), tipManager(nullptr) {
         for (int i = 0; i < 10; i++) {
             apps[i] = nullptr;
         }
         globalUIManager = new UIManager();
         globalSDManager = new SDFileManager();
-        brightnessMenu = new BrightnessMenu(globalUIManager);
         tipManager = new TipManager(globalUIManager);
     }
     
@@ -47,7 +44,6 @@ public:
         clear();
         delete globalUIManager;
         delete globalSDManager;
-        delete brightnessMenu;
         delete tipManager;
     }
     
@@ -176,9 +172,6 @@ public:
             return;
         }
         if (tipManager && tipManager->handleKeyEvent(event)) {
-            return;
-        }
-        if (brightnessMenu && brightnessMenu->handleKeyEvent(event)) {
             return;
         }
         if (event.esc && globalEscEnabled && currentApp && currentApp != launcherApp) {

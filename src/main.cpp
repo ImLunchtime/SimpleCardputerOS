@@ -6,7 +6,6 @@
 #include "apps/Settings/SettingsApp.h"
 #include "apps/Test/TestApp.h"
 #include "apps/FileManager/FileManagerApp.h"
-#include "apps/Theme/ThemeApp.h"
 #include "apps/Remote/RemoteApp.h"
 #include "themes/ThemeManager.h"
 #include "themes/PrototypeTheme.h"
@@ -58,7 +57,6 @@ MusicApp musicApp(&globalEventSystem, &globalAppManager);
 SettingsApp settingsApp(&globalEventSystem);
 TestApp testApp(&globalEventSystem);
 FileManagerApp fileManagerApp(&globalEventSystem, &globalAppManager);
-ThemeApp themeApp(&globalEventSystem);
 RemoteApp remoteApp(&globalEventSystem);
 
 void setup() {
@@ -81,7 +79,6 @@ void setup() {
   }
 
   globalAppManager.registerApp("launcher", "Launcher", &launcherApp, true);
-  globalAppManager.registerApp("theme", "Theme", &themeApp);
   globalAppManager.registerApp("music", "Music", &musicApp);
   globalAppManager.registerApp("settings", "Settings", &settingsApp);
   globalAppManager.registerApp("filemanager", "Files", &fileManagerApp);

@@ -7,7 +7,6 @@
 #include "assets/icon_files.h"
 #include "assets/icon_music_sd.h"
 #include "assets/icon_test.h"
-#include "assets/icon_theme.h"
 #include "assets/icon_remote.h"
 #include "assets/icon_settings.h"
 
@@ -59,10 +58,10 @@ public:
         mainWindow = uiManager->createWindow(WINDOW_ID, 5, 5, 144, 108, "Launcher", "MainWindow");
         
         // 创建电池信息标签 - 位于窗口右上角
-        batteryLabel = uiManager->createLabel(BATTERY_LABEL_ID, 115, 10, batteryManager.getBatteryLevelString(), "BatteryInfo", mainWindow);
+        batteryLabel = uiManager->createLabel(BATTERY_LABEL_ID, 110, 10, batteryManager.getBatteryLevelString(), "BatteryInfo", mainWindow);
         batteryLabel->setTextColor(TFT_GREEN);
         String voltageText = String(batteryManager.getBatteryVoltage()) + "mV";
-        batteryVoltageLabel = uiManager->createLabel(BATTERY_VOLTAGE_LABEL_ID, 115, 20, voltageText, "BatteryVoltage", mainWindow);
+        batteryVoltageLabel = uiManager->createLabel(BATTERY_VOLTAGE_LABEL_ID, 110, 20, voltageText, "BatteryVoltage", mainWindow);
         batteryVoltageLabel->setTextColor(TFT_CYAN);
         
         // 创建状态标签
@@ -170,9 +169,6 @@ private:
                 added = true;
             } else if (name == "test" || display == "Test") {
                 gridMenu->addImageItem(icon_test_png, icon_test_png_size, itemId);
-                added = true;
-            } else if (name == "theme" || display == "Theme") {
-                gridMenu->addImageItem(icon_theme_png, icon_theme_png_size, itemId);
                 added = true;
             } else if (name == "remote" || display == "Remote" || display == "Remote") {
                 gridMenu->addImageItem(icon_remote, icon_remote_size, itemId);
