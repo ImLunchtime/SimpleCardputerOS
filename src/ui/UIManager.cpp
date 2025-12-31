@@ -639,8 +639,8 @@ UIPanel* UIManager::createPanel(int id, int x, int y, int width, int height, con
     return panel;
 }
 
-UIMenuList* UIManager::createMenuList(int id, int x, int y, int width, int height, const String& name, int itemHeight, UIWidget* parent) {
-    UIMenuList* menu = new UIMenuList(id, x, y, width, height, name, itemHeight);
+UIMenuList* UIManager::createMenuList(int id, int x, int y, int width, int height, const String& name, UIWidget* parent) {
+    UIMenuList* menu = new UIMenuList(id, x, y, width, height, name);
     menu->setParent(parent ? parent : rootScreen);
     addWidget(menu);
     return menu;

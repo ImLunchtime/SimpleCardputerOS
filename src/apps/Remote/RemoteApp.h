@@ -35,8 +35,8 @@ private:
 
     class RemoteMenuList : public UIMenuList {
     public:
-        RemoteMenuList(int id, int x, int y, int width, int height, const String& name, int itemHeight, RemoteApp* app)
-            : UIMenuList(id, x, y, width, height, name, itemHeight), parentApp(app) {}
+        RemoteMenuList(int id, int x, int y, int width, int height, const String& name, RemoteApp* app)
+            : UIMenuList(id, x, y, width, height, name), parentApp(app) {}
 
         void onItemSelected(MenuItem* item) override {
             parentApp->handleRemoteSelection(item);
@@ -68,7 +68,7 @@ public:
 
         menuStatusLabel = uiManager->createLabel(MENU_STATUS_LABEL_ID, 15, 25, "Select a remote:", "RemoteStatus", menuWindow);
 
-        remoteMenu = new RemoteMenuList(MENU_LIST_ID, 15, 40, 140, 50, "RemoteList", 12, this);
+        remoteMenu = new RemoteMenuList(MENU_LIST_ID, 15, 40, 140, 50, "RemoteList", this);
         remoteMenu->setParent(menuWindow);
         uiManager->addWidget(remoteMenu);
 

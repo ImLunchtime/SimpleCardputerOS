@@ -55,7 +55,7 @@ public:
     UIButton* createImageButtonFromFile(int id, int x, int y, int width, int height, const String& filePath, const String& name = "", UIWidget* parent = nullptr);
     UIWindow* createWindow(int id, int x, int y, int width, int height, const String& title = "", const String& name = "", UIWidget* parent = nullptr);
     UIPanel* createPanel(int id, int x, int y, int width, int height, const String& name = "", UIWidget* parent = nullptr);
-    UIMenuList* createMenuList(int id, int x, int y, int width, int height, const String& name = "", int itemHeight = 16, UIWidget* parent = nullptr);
+    UIMenuList* createMenuList(int id, int x, int y, int width, int height, const String& name = "", UIWidget* parent = nullptr);
     UIMenuGrid* createMenuGrid(int id, int x, int y, int width, int height, int columns, int rows, const String& name = "", UIWidget* parent = nullptr);
     UIImage* createImage(int id, int x, int y, int width, int height, const uint8_t* imageData, size_t dataSize, const String& name = "", UIWidget* parent = nullptr);
 private:

@@ -7,7 +7,7 @@ MusicApp::MusicApp(EventSystem* events, AppManager* manager)
     : eventSystem(events), appManager(manager), 
       audioFile(nullptr), audioOutput(nullptr), mp3Generator(nullptr), id3Source(nullptr),
       isPlaying(false), isPaused(false), isInitialized(false), pausedPosition(0),
-      currentVolume(50), musicFileCount(0), currentFileIndex(0),
+      currentVolume(10), musicFileCount(0), currentFileIndex(0),
       audioTaskHandle(nullptr), audioCommandQueue(nullptr), audioStatusMutex(nullptr) {
     uiManager = appManager->getUIManager();
     
@@ -92,7 +92,7 @@ void MusicApp::setup() {
     songLabel->setTextColor(TFT_YELLOW);
     uiManager->addWidget(songLabel);
     
-    playList = new MusicMenuList(PLAYLIST_ID, 25, 45, 190, 65, "playlist", 10, this);
+    playList = new MusicMenuList(PLAYLIST_ID, 25, 45, 190, 65, "playlist", this);
     playList->setParent(mainWindow);
     playList->setColors(TFT_WHITE, TFT_BLUE, TFT_WHITE, TFT_DARKGREY);
     uiManager->addWidget(playList);

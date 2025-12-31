@@ -33,9 +33,9 @@ private:
         invalidate();
     }
 public:
-    UIMenuList(int id, int x, int y, int width, int height, const String& name = "", int _itemHeight = 18)
+    UIMenuList(int id, int x, int y, int width, int height, const String& name = "")
         : UIMenu(id, WIDGET_MENU_LIST, x, y, width, height, name),
-          itemHeight(_itemHeight), scrollOffset(0), scrollPixel(0.0f), targetScrollPixel(0.0f), lastAnimMs(0), animating(false) {
+          itemHeight(18), scrollOffset(0), scrollPixel(0.0f), targetScrollPixel(0.0f), lastAnimMs(0), animating(false) {
         visibleItems = (height - 4) / itemHeight;
     }
     void draw(LovyanGFX* display) override {
@@ -114,7 +114,7 @@ public:
             animating = false;
             return true;
         }
-        float speed = 80.0f;
+        float speed = 144.0f;
         float maxStep = speed * dt;
         if (maxStep > absDiff) maxStep = absDiff;
         scrollPixel += (diff >= 0.0f ? maxStep : -maxStep);

@@ -23,8 +23,8 @@ private:
     // 自定义设置菜单
     class SettingsMenuList : public UIMenuList {
     public:
-        SettingsMenuList(int id, int x, int y, int width, int height, const String& name, int itemHeight, SettingsApp* app)
-            : UIMenuList(id, x, y, width, height, name, itemHeight), parentApp(app) {}
+        SettingsMenuList(int id, int x, int y, int width, int height, const String& name, SettingsApp* app)
+            : UIMenuList(id, x, y, width, height, name), parentApp(app) {}
         
         void onItemSelected(MenuItem* item) override {
             parentApp->handleSettingSelection(item);
@@ -46,7 +46,7 @@ public:
         statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 35, 35, "Select a setting", "Status", mainWindow);
         
         // 创建设置菜单（设置父为主窗口）
-        settingsMenu = new SettingsMenuList(MENU_LIST_ID, 35, 45, 120, 40, "SettingsMenu", 14, this);
+        settingsMenu = new SettingsMenuList(MENU_LIST_ID, 35, 45, 120, 40, "SettingsMenu", this);
         settingsMenu->setParent(mainWindow);
         uiManager->addWidget(settingsMenu);
         

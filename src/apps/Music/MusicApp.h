@@ -162,7 +162,7 @@ private:
     class VolumeSlider : public UISlider {
     public:
         VolumeSlider(int id, int x, int y, int width, int height, const String& name)
-            : UISlider(id, x, y, width, height, 0, 100, 50, "Volume", name) {
+            : UISlider(id, x, y, width, height, 0, 100, 10, "Volume", name) {
         }
         
         void draw(LovyanGFX* display) override {
@@ -197,8 +197,8 @@ private:
     // 自定义音乐菜单列表类
     class MusicMenuList : public UIMenuList {
     public:
-        MusicMenuList(int id, int x, int y, int width, int height, const String& name, int itemHeight, MusicApp* app)
-            : UIMenuList(id, x, y, width, height, name, 18), parentApp(app) {}
+        MusicMenuList(int id, int x, int y, int width, int height, const String& name, MusicApp* app)
+            : UIMenuList(id, x, y, width, height, name), parentApp(app) {}
         
         void onItemSelected(MenuItem* item) override {
             parentApp->handleMenuSelection(item);

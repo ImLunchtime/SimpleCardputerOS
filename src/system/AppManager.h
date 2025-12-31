@@ -6,6 +6,7 @@
 #include "system/SDFileManager.h"
 #include "system/BrightnessMenu.h"
 #include "system/SleepManager.h"
+#include "system/TipManager.h"
 
 // 应用信息结构
 struct AppInfo {
@@ -29,15 +30,17 @@ private:
     SDFileManager* globalSDManager;
     bool globalEscEnabled;
     BrightnessMenu* brightnessMenu;
+    TipManager* tipManager;
     
 public:
-    AppManager(EventSystem* events) : appCount(0), currentApp(nullptr), launcherApp(nullptr), eventSystem(events), globalEscEnabled(true), brightnessMenu(nullptr) {
+    AppManager(EventSystem* events) : appCount(0), currentApp(nullptr), launcherApp(nullptr), eventSystem(events), globalEscEnabled(true), brightnessMenu(nullptr), tipManager(nullptr) {
         for (int i = 0; i < 10; i++) {
             apps[i] = nullptr;
         }
         globalUIManager = new UIManager();
         globalSDManager = new SDFileManager();
         brightnessMenu = new BrightnessMenu(globalUIManager);
+        tipManager = new TipManager(globalUIManager);
     }
     
     ~AppManager() {
@@ -45,10 +48,15 @@ public:
         delete globalUIManager;
         delete globalSDManager;
         delete brightnessMenu;
+        delete tipManager;
     }
     
     UIManager* getUIManager() {
         return globalUIManager;
+    }
+
+    TipManager* getTipManager() {
+        return tipManager;
     }
 
     SDFileManager* getSDFileManager() {
@@ -157,11 +165,17 @@ public:
         if (globalUIManager && !globalSleepManager.isSleeping()) {
             globalUIManager->tick();
         }
+        if (tipManager && !globalSleepManager.isSleeping()) {
+            tipManager->update();
+        }
     }
     
     // 处理键盘事件
     void handleKeyEvent(const KeyEvent& event) {
         if (globalSleepManager.isSleeping()) {
+            return;
+        }
+        if (tipManager && tipManager->handleKeyEvent(event)) {
             return;
         }
         if (brightnessMenu && brightnessMenu->handleKeyEvent(event)) {

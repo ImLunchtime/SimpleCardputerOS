@@ -27,8 +27,8 @@ private:
     // 自定义主题菜单
     class ThemeMenuList : public UIMenuList {
     public:
-        ThemeMenuList(int id, int x, int y, int width, int height, const String& name, int itemHeight, ThemeApp* app)
-            : UIMenuList(id, x, y, width, height, name, itemHeight), parentApp(app) {}
+        ThemeMenuList(int id, int x, int y, int width, int height, const String& name, ThemeApp* app)
+            : UIMenuList(id, x, y, width, height, name), parentApp(app) {}
         
         void onItemSelected(MenuItem* item) override {
             parentApp->handleThemeSelection(item);
@@ -55,7 +55,7 @@ public:
         uiManager->addWidget(previewLabel);
         
         // 创建主题菜单 - 更紧凑的尺寸（设置父为主窗口）
-        themeMenu = new ThemeMenuList(4, 35, 55, 150, 50, "ThemeMenu", 16, this);
+        themeMenu = new ThemeMenuList(4, 35, 55, 150, 50, "ThemeMenu", this);
         themeMenu->setParent(mainWindow);
         
         // 添加主题选项
