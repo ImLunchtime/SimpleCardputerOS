@@ -55,22 +55,20 @@ public:
         batteryManager.forceUpdate();
         
         // 创建主窗口 - 更小的窗口位于左上角
-        mainWindow = uiManager->createWindow(WINDOW_ID, 5, 5, 170, 108, "Launcher", "MainWindow");
+        mainWindow = uiManager->createWindow(WINDOW_ID, 5, 5, 144, 108, "Launcher", "MainWindow");
         
         // 创建电池信息标签 - 位于窗口右上角
-        batteryLabel = uiManager->createLabel(BATTERY_LABEL_ID, 125, 10, batteryManager.getBatteryLevelString(), "BatteryInfo", mainWindow);
+        batteryLabel = uiManager->createLabel(BATTERY_LABEL_ID, 115, 10, batteryManager.getBatteryLevelString(), "BatteryInfo", mainWindow);
         batteryLabel->setTextColor(TFT_GREEN);
-        
-        // 创建电池电压标签 - 位于电池信息标签下方
         String voltageText = String(batteryManager.getBatteryVoltage()) + "mV";
-        batteryVoltageLabel = uiManager->createLabel(BATTERY_VOLTAGE_LABEL_ID, 125, 20, voltageText, "BatteryVoltage", mainWindow);
+        batteryVoltageLabel = uiManager->createLabel(BATTERY_VOLTAGE_LABEL_ID, 115, 20, voltageText, "BatteryVoltage", mainWindow);
         batteryVoltageLabel->setTextColor(TFT_CYAN);
         
         // 创建状态标签
         statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 10, 22, "Select app", "Status", mainWindow);
         
         // 创建网格菜单 - 4x2网格布局以显示更多应用
-        gridMenu = new LauncherMenuGrid(GRID_MENU_ID, 10, 33, 160, 76, 4, 2, "AppGrid", this);
+        gridMenu = new LauncherMenuGrid(GRID_MENU_ID, 10, 33, 134, 76, 3, 2, "AppGrid", this);
         gridMenu->setParent(mainWindow);
         uiManager->addWidget(gridMenu);
         
