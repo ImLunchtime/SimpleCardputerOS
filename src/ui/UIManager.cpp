@@ -56,6 +56,28 @@ bool UIManager::computeClipRect(UIWidget* widget, int& outX, int& outY, int& out
     return true;
 }
 
+static bool isWidgetAndParentsVisibleForDraw(UIWidget* widget) {
+    if (!widget) return false;
+    bool selfVisible = false;
+    if (widget->getType() == WIDGET_WINDOW) {
+        UIWindow* window = static_cast<UIWindow*>(widget);
+        selfVisible = window->shouldDrawWindow();
+    } else {
+        selfVisible = widget->isVisible();
+    }
+    if (!selfVisible) return false;
+    UIWidget* p = widget->getParent();
+    while (p) {
+        if (!p->isVisible()) return false;
+        if (p->getType() == WIDGET_WINDOW) {
+            UIWindow* pw = static_cast<UIWindow*>(p);
+            if (!pw->shouldDrawWindow() || !pw->shouldDrawContent()) return false;
+        }
+        p = p->getParent();
+    }
+    return true;
+}
+
 void UIManager::drawWidgetClipped(UIWidget* widget, bool partial) {
     if (!display || !widget) return;
     int cx, cy, cw, ch;
@@ -87,7 +109,7 @@ bool UIManager::flushDirtyInAppArea() {
     bool hasDirty = false;
     for (int i = 0; i < foregroundWidgetCount; i++) {
         UIWidget* w = foregroundWidgets[i];
-        if (!w || !w->isVisible() || !w->isDirty()) continue;
+        if (!w || !isWidgetAndParentsVisibleForDraw(w) || !w->isDirty()) continue;
         int x, y, ww, hh;
         w->getDirtyBounds(x, y, ww, hh);
         if (!hasDirty) {
@@ -115,13 +137,13 @@ bool UIManager::flushDirtyInAppArea() {
             break;
         }
     }
-    if (appWindow && appWindow->isVisible()) {
+    if (appWindow && isWidgetAndParentsVisibleForDraw(appWindow)) {
         drawWidgetClippedWithExtra(appWindow, false, dirtyX, dirtyY, dirtyW, dirtyH);
     }
 
     for (int i = 0; i < foregroundWidgetCount; i++) {
         UIWidget* w = foregroundWidgets[i];
-        if (!w || !w->isVisible() || w == appWindow) continue;
+        if (!w || w == appWindow || !isWidgetAndParentsVisibleForDraw(w)) continue;
         int wx, wy, ww, wh;
         w->getDirtyBounds(wx, wy, ww, wh);
         if (!rectIntersects(wx, wy, ww, wh, dirtyX, dirtyY, dirtyW, dirtyH)) continue;
@@ -145,7 +167,7 @@ bool UIManager::flushDirtyInRoot() {
     bool hasDirty = false;
     for (int i = 0; i < widgetCount; i++) {
         UIWidget* w = widgets[i];
-        if (!w || !w->isVisible() || !w->isDirty()) continue;
+        if (!w || !isWidgetAndParentsVisibleForDraw(w) || !w->isDirty()) continue;
         int x, y, ww, hh;
         w->getDirtyBounds(x, y, ww, hh);
         if (!hasDirty) {
@@ -168,7 +190,7 @@ bool UIManager::flushDirtyInRoot() {
 
     for (int i = 0; i < widgetCount; i++) {
         UIWidget* w = widgets[i];
-        if (!w || !w->isVisible()) continue;
+        if (!w || !isWidgetAndParentsVisibleForDraw(w)) continue;
         int wx, wy, ww, wh;
         w->getDirtyBounds(wx, wy, ww, wh);
         if (!rectIntersects(wx, wy, ww, wh, dirtyX, dirtyY, dirtyW, dirtyH)) continue;
@@ -215,19 +237,19 @@ void UIManager::drawAllOn(LovyanGFX* target) {
     if (!target) return;
     if (hasBackgroundLayer) {
         for (int i = 0; i < backgroundWidgetCount; i++) {
-            if (backgroundWidgets[i] && backgroundWidgets[i]->isVisible()) {
+            if (backgroundWidgets[i] && isWidgetAndParentsVisibleForDraw(backgroundWidgets[i])) {
                 drawWidgetClippedOn(target, backgroundWidgets[i], false);
             }
         }
     }
     for (int i = 0; i < foregroundWidgetCount; i++) {
-        if (foregroundWidgets[i] && foregroundWidgets[i]->isVisible()) {
+        if (foregroundWidgets[i] && isWidgetAndParentsVisibleForDraw(foregroundWidgets[i])) {
             drawWidgetClippedOn(target, foregroundWidgets[i], false);
         }
     }
     if (!hasBackgroundLayer && foregroundWidgetCount == 0) {
         for (int i = 0; i < widgetCount; i++) {
-            if (widgets[i] && widgets[i]->isVisible()) {
+            if (widgets[i] && isWidgetAndParentsVisibleForDraw(widgets[i])) {
                 drawWidgetClippedOn(target, widgets[i], false);
             }
         }
@@ -426,7 +448,7 @@ void UIManager::drawAll() {
     display->startWrite();
     for (int i = 0; i < widgetCount; i++) {
         UIWidget* w = widgets[i];
-        if (w && w->isVisible()) {
+        if (w && isWidgetAndParentsVisibleForDraw(w)) {
             drawWidgetClipped(w, false);
         }
     }
@@ -482,14 +504,14 @@ void UIManager::finishAppSetup() {
 
 void UIManager::drawWidget(int id) {
     UIWidget* widget = getWidget(id);
-    if (widget && widget->isVisible()) {
+    if (widget && isWidgetAndParentsVisibleForDraw(widget)) {
         drawWidgetClipped(widget, false);
     }
 }
 
 void UIManager::drawWidgetPartial(int id) {
     UIWidget* widget = getWidget(id);
-    if (widget && widget->isVisible()) {
+    if (widget && isWidgetAndParentsVisibleForDraw(widget)) {
         drawWidgetClipped(widget, true);
     }
 }
@@ -497,7 +519,7 @@ void UIManager::drawWidgetPartial(int id) {
 void UIManager::drawForegroundPartial() {
     if (hasBackgroundLayer && foregroundWidgetCount > 0) {
         for (int i = 0; i < foregroundWidgetCount; i++) {
-            if (foregroundWidgets[i] && foregroundWidgets[i]->isVisible()) {
+            if (foregroundWidgets[i] && isWidgetAndParentsVisibleForDraw(foregroundWidgets[i])) {
                 drawWidgetClipped(foregroundWidgets[i], true);
             }
         }
@@ -524,7 +546,7 @@ void UIManager::tick() {
     bool anyUpdateRequested = false;
     if (hasBackgroundLayer) {
         for (int i = 0; i < backgroundWidgetCount; i++) {
-            if (backgroundWidgets[i] && backgroundWidgets[i]->isVisible()) {
+            if (backgroundWidgets[i]) {
                 if (backgroundWidgets[i]->update(nowMs)) {
                     backgroundWidgets[i]->invalidate();
                     anyUpdateRequested = true;
@@ -532,7 +554,7 @@ void UIManager::tick() {
             }
         }
         for (int i = 0; i < foregroundWidgetCount; i++) {
-            if (foregroundWidgets[i] && foregroundWidgets[i]->isVisible()) {
+            if (foregroundWidgets[i]) {
                 if (foregroundWidgets[i]->update(nowMs)) {
                     foregroundWidgets[i]->invalidate();
                     anyUpdateRequested = true;
@@ -541,7 +563,7 @@ void UIManager::tick() {
         }
     } else {
         for (int i = 0; i < widgetCount; i++) {
-            if (widgets[i] && widgets[i]->isVisible()) {
+            if (widgets[i]) {
                 if (widgets[i]->update(nowMs)) {
                     widgets[i]->invalidate();
                     anyUpdateRequested = true;
@@ -552,14 +574,14 @@ void UIManager::tick() {
     bool anyDirty = false;
     if (hasBackgroundLayer) {
         for (int i = 0; i < foregroundWidgetCount; i++) {
-            if (foregroundWidgets[i] && foregroundWidgets[i]->isVisible() && foregroundWidgets[i]->isDirty()) {
+            if (foregroundWidgets[i] && isWidgetAndParentsVisibleForDraw(foregroundWidgets[i]) && foregroundWidgets[i]->isDirty()) {
                 anyDirty = true;
                 break;
             }
         }
     } else {
         for (int i = 0; i < widgetCount; i++) {
-            if (widgets[i] && widgets[i]->isVisible() && widgets[i]->isDirty()) {
+            if (widgets[i] && isWidgetAndParentsVisibleForDraw(widgets[i]) && widgets[i]->isDirty()) {
                 anyDirty = true;
                 break;
             }

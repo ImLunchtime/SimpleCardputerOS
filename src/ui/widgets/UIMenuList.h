@@ -1,6 +1,7 @@
 #pragma once
 #include <M5Cardputer.h>
 #include "UIMenu.h"
+#include <smooth_ui_toolkit.hpp>
 class UIMenuList : public UIMenu {
 private:
     int itemHeight;
@@ -8,8 +9,8 @@ private:
     int visibleItems;
     float scrollPixel;
     float targetScrollPixel;
-    uint32_t lastAnimMs;
     bool animating;
+    smooth_ui_toolkit::AnimateValue scrollAnim;
     String clipText(const String& text, int maxWidth) {
         if (text.length() == 0) return text;
         int availableWidth = maxWidth - 8;
@@ -24,18 +25,22 @@ private:
         return text.substring(0, maxChars) + "...";
     }
     void setScrollOffsetAnimated(int newScrollOffset) {
-        float current = animating ? scrollPixel : ((float)scrollOffset * (float)itemHeight);
+        float current = animating ? scrollAnim.directValue() : ((float)scrollOffset * (float)itemHeight);
         scrollOffset = newScrollOffset;
         targetScrollPixel = (float)scrollOffset * (float)itemHeight;
+        scrollAnim.teleport(current);
+        auto& spring = scrollAnim.springOptions();
+        spring.visualDuration = 1.0f;
+        spring.bounce = 0.8f;
+        scrollAnim.move(targetScrollPixel);
         scrollPixel = current;
         animating = true;
-        lastAnimMs = 0;
         invalidate();
     }
 public:
     UIMenuList(int id, int x, int y, int width, int height, const String& name = "")
         : UIMenu(id, WIDGET_MENU_LIST, x, y, width, height, name),
-          itemHeight(18), scrollOffset(0), scrollPixel(0.0f), targetScrollPixel(0.0f), lastAnimMs(0), animating(false) {
+          itemHeight(18), scrollOffset(0), scrollPixel(0.0f), targetScrollPixel(0.0f), animating(false) {
         visibleItems = (height - 4) / itemHeight;
     }
     void draw(LovyanGFX* display) override {
@@ -99,25 +104,16 @@ public:
     bool update(uint32_t nowMs) override {
         if (!visible || itemHeight <= 0) return false;
         if (!animating) return false;
-        if (lastAnimMs == 0) {
-            lastAnimMs = nowMs;
-            return true;
-        }
-        float dt = (float)(nowMs - lastAnimMs) / 1000.0f;
-        lastAnimMs = nowMs;
-        if (dt <= 0.0f) return false;
-
+        float currentTimeS = (float)nowMs / 1000.0f;
+        scrollAnim.update(currentTimeS);
+        float newValue = scrollAnim.directValue();
+        scrollPixel = newValue;
         float diff = targetScrollPixel - scrollPixel;
         float absDiff = diff >= 0.0f ? diff : -diff;
-        if (absDiff < 0.5f) {
+        if (absDiff < 0.5f || scrollAnim.currentPlayingState() == smooth_ui_toolkit::AnimateState::Completed) {
             scrollPixel = targetScrollPixel;
             animating = false;
-            return true;
         }
-        float speed = 144.0f;
-        float maxStep = speed * dt;
-        if (maxStep > absDiff) maxStep = absDiff;
-        scrollPixel += (diff >= 0.0f ? maxStep : -maxStep);
         return true;
     }
     bool handleSecondaryKeyEvent(const KeyEvent& event) override {
