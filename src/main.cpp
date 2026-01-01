@@ -78,6 +78,9 @@ void setup() {
     globalThemeManager->setCurrentTheme("Orange");
   }
 
+  globalAppManager.loadSystemConfig();
+  M5Cardputer.Display.setBrightness(g_displayBrightness);
+
   globalAppManager.registerApp("launcher", "Launcher", &launcherApp, true);
   globalAppManager.registerApp("music", "Music", &musicApp);
   globalAppManager.registerApp("settings", "Settings", &settingsApp);

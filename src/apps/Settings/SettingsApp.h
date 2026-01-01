@@ -60,15 +60,20 @@ private:
 
     class BrightnessSlider : public UISlider {
     public:
-        BrightnessSlider(int id, int x, int y, int width, int height, const String& name)
-            : UISlider(id, x, y, width, height, 5, 100, 50, "Brightness", name) {}
+        BrightnessSlider(int id, int x, int y, int width, int height, const String& name, SettingsApp* app)
+            : UISlider(id, x, y, width, height, 5, 100, 50, "Brightness", name), parentApp(app) {}
         void onValueChanged(int newValue) override {
             int brightness = (newValue * 255) / 100;
             if (brightness < 0) brightness = 0;
             if (brightness > 255) brightness = 255;
             M5Cardputer.Display.setBrightness(brightness);
             g_displayBrightness = brightness;
+            if (parentApp) {
+                parentApp->onBrightnessChanged();
+            }
         }
+    private:
+        SettingsApp* parentApp;
     };
 
     class ThemeMenuList : public UIMenuList {
@@ -125,7 +130,7 @@ public:
         int sliderY = 55;
         int sliderW = 120;
         int sliderH = 20;
-        BrightnessSlider* slider = new BrightnessSlider(BRIGHTNESS_SLIDER_ID, sliderX, sliderY, sliderW, sliderH, "BrightnessSlider");
+        BrightnessSlider* slider = new BrightnessSlider(BRIGHTNESS_SLIDER_ID, sliderX, sliderY, sliderW, sliderH, "BrightnessSlider", this);
         int initialPercent = (g_displayBrightness * 100) / 255;
         if (initialPercent < 5) initialPercent = 5;
         if (initialPercent > 100) initialPercent = 100;
@@ -160,8 +165,8 @@ public:
         aboutWindow = uiManager->createWindow(ABOUT_WINDOW_ID, 30, 20, 180, 100, "About", "AboutWindow");
         aboutWindow->setChildOffset(-30, -20);
         aboutTitleLabel = uiManager->createLabel(ABOUT_TITLE_LABEL_ID, 35, 40, "CardputerOS", "AboutTitle", aboutWindow);
-        aboutLine1Label = uiManager->createLabel(ABOUT_LINE1_LABEL_ID, 35, 55, "Using Kiwifruit framework", "AboutLine1", aboutWindow);
-        aboutLine2Label = uiManager->createLabel(ABOUT_LINE2_LABEL_ID, 35, 70, "Kiwifruit v5.78", "AboutLine2", aboutWindow);
+        aboutLine1Label = uiManager->createLabel(ABOUT_LINE1_LABEL_ID, 35, 55, "使用猕猴桃框架", "AboutLine1", aboutWindow);
+        aboutLine2Label = uiManager->createLabel(ABOUT_LINE2_LABEL_ID, 35, 70, "Kiwifruit v9.1.78", "AboutLine2", aboutWindow);
 
         uiManager->setWidgetTreeVisible(aboutWindow, false);
 
@@ -247,6 +252,9 @@ public:
                 if (uiManager) {
                     uiManager->refresh();
                 }
+                if (appManager) {
+                    appManager->saveSystemConfig();
+                }
                 break;
             }
         }
@@ -275,6 +283,12 @@ private:
             themePreviewLabel->setText(currentStatus);
         } else {
             themePreviewLabel->setText("Current: No theme active");
+        }
+    }
+
+    void onBrightnessChanged() {
+        if (appManager) {
+            appManager->saveSystemConfig();
         }
     }
 

@@ -196,6 +196,20 @@ public:
         file.close();
         return content;
     }
+
+    // 写入文件内容（覆盖）
+    bool writeFile(const String& filePath, const String& content) {
+        if (!initialized) return false;
+        
+        File file = SD.open(filePath, FILE_WRITE);
+        if (!file) {
+            return false;
+        }
+        
+        file.print(content);
+        file.close();
+        return true;
+    }
     
     // 扫描所有文件（递归）
     bool scanAllFiles(FileInfo* fileList, int& fileCount, int maxFiles, const String& extension = "") {

@@ -6,6 +6,10 @@
 #include "system/SDFileManager.h"
 #include "system/SleepManager.h"
 #include "system/TipManager.h"
+#include "themes/ThemeManager.h"
+
+extern int g_displayBrightness;
+extern ThemeManager* globalThemeManager;
 
 // 应用信息结构
 struct AppInfo {
@@ -69,6 +73,93 @@ public:
 
     bool initializeSD() {
         return globalSDManager ? globalSDManager->initialize() : false;
+    }
+
+    bool loadSystemConfig() {
+        SDFileManager* fm = getSDFileManager();
+        if (!fm || !fm->isInitialized()) {
+            return false;
+        }
+
+        const String path = "/scos_config.json";
+        if (!fm->exists(path)) {
+            return false;
+        }
+
+        String content = fm->readFile(path);
+        if (content.length() == 0) {
+            return false;
+        }
+
+        int newBrightness = g_displayBrightness;
+        String brightnessKey = "\"brightness\"";
+        int bPos = content.indexOf(brightnessKey);
+        if (bPos >= 0) {
+            int colonPos = content.indexOf(':', bPos + brightnessKey.length());
+            if (colonPos >= 0) {
+                int valueStart = colonPos + 1;
+                while (valueStart < (int)content.length() && (content[valueStart] == ' ' || content[valueStart] == '\t')) {
+                    valueStart++;
+                }
+                int valueEnd = valueStart;
+                while (valueEnd < (int)content.length() && content[valueEnd] >= '0' && content[valueEnd] <= '9') {
+                    valueEnd++;
+                }
+                if (valueEnd > valueStart) {
+                    String numStr = content.substring(valueStart, valueEnd);
+                    int parsed = numStr.toInt();
+                    if (parsed >= 0 && parsed <= 255) {
+                        newBrightness = parsed;
+                    }
+                }
+            }
+        }
+
+        g_displayBrightness = newBrightness;
+        M5Cardputer.Display.setBrightness(g_displayBrightness);
+
+        String themeKey = "\"theme\"";
+        int tPos = content.indexOf(themeKey);
+        if (tPos >= 0 && globalThemeManager) {
+            int colonPos = content.indexOf(':', tPos + themeKey.length());
+            if (colonPos >= 0) {
+                int quoteStart = content.indexOf('"', colonPos + 1);
+                if (quoteStart >= 0) {
+                    int quoteEnd = content.indexOf('"', quoteStart + 1);
+                    if (quoteEnd > quoteStart) {
+                        String themeName = content.substring(quoteStart + 1, quoteEnd);
+                        themeName.trim();
+                        if (themeName.length() > 0) {
+                            globalThemeManager->setCurrentTheme(themeName);
+                        }
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
+    bool saveSystemConfig() {
+        SDFileManager* fm = getSDFileManager();
+        if (!fm || !fm->isInitialized()) {
+            return false;
+        }
+
+        String themeName = "";
+        if (globalThemeManager) {
+            Theme* currentTheme = globalThemeManager->getCurrentTheme();
+            if (currentTheme) {
+                themeName = currentTheme->getThemeName();
+            }
+        }
+
+        String content = "{\n";
+        content += "  \"brightness\": " + String(g_displayBrightness) + ",\n";
+        content += "  \"theme\": \"" + themeName + "\"\n";
+        content += "}\n";
+
+        return fm->writeFile("/scos_config.json", content);
     }
     
     // 注册应用

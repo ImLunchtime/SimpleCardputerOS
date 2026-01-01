@@ -33,14 +33,16 @@ private:
         int startH = targetH / 4;
         if (startW < 10) startW = targetW / 2;
         if (startH < 10) startH = targetH / 2;
-        int centerX = targetX + targetW / 2;
-        int centerY = targetY + targetH / 2;
+        int startX = 0;
+        int startY = 0;
         int currentW = startW + (int)((float)(targetW - startW) * p);
         int currentH = startH + (int)((float)(targetH - startH) * p);
+        int currentX = startX + (int)((float)(targetX - startX) * p);
+        int currentY = startY + (int)((float)(targetY - startY) * p);
         outW = currentW;
         outH = currentH;
-        outX = centerX - currentW / 2;
-        outY = centerY - currentH / 2;
+        outX = currentX;
+        outY = currentY;
     }
     void startOpenAnimation() {
         animating = true;

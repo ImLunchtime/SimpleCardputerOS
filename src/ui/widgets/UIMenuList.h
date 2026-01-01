@@ -30,8 +30,8 @@ private:
         targetScrollPixel = (float)scrollOffset * (float)itemHeight;
         scrollAnim.teleport(current);
         auto& spring = scrollAnim.springOptions();
-        spring.visualDuration = 1.0f;
-        spring.bounce = 0.8f;
+        spring.visualDuration = 1.2f;
+        spring.bounce = 0.2f;
         scrollAnim.move(targetScrollPixel);
         scrollPixel = current;
         animating = true;

@@ -26,6 +26,20 @@ static bool intersectRects(int ax, int ay, int aw, int ah, int bx, int by, int b
 
 bool UIManager::computeClipRect(UIWidget* widget, int& outX, int& outY, int& outW, int& outH) {
     if (!widget) return false;
+    if (widget->getType() == WIDGET_WINDOW) {
+        UIWindow* window = static_cast<UIWindow*>(widget);
+        if (window->isAnimating()) {
+            if (!display) return false;
+            int dw = display->width();
+            int dh = display->height();
+            if (dw <= 0 || dh <= 0) return false;
+            outX = 0;
+            outY = 0;
+            outW = dw;
+            outH = dh;
+            return true;
+        }
+    }
     int ax, ay, aw, ah;
     widget->getAbsoluteBounds(ax, ay, aw, ah);
     int cx = ax;
