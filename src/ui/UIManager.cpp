@@ -223,7 +223,7 @@ bool UIManager::flushDirtyInRoot() {
 }
 
 UIManager::UIManager() : display(&M5Cardputer.Display), widgetCount(0), currentFocus(-1), focusableCount(0),
-                  backgroundWidgetCount(0), foregroundWidgetCount(0), hasBackgroundLayer(false), rootScreen(nullptr), lastAnimationRedrawMs(0), windowCanvas(nullptr), lastPageWindow(nullptr) {
+                  backgroundWidgetCount(0), foregroundWidgetCount(0), hasBackgroundLayer(false), rootScreen(nullptr), lastAnimationRedrawMs(0), windowCanvas(nullptr), lastPageWindow(nullptr), closingToLauncher(false) {
     for (int i = 0; i < 20; i++) {
         widgets[i] = nullptr;
         focusableWidgets[i] = -1;
@@ -508,6 +508,22 @@ void UIManager::switchToApp() {
 
 void UIManager::switchToLauncher() {
     if (foregroundWidgetCount > 0) {
+        bool anyWindowVisible = false;
+        for (int i = 0; i < foregroundWidgetCount; i++) {
+            UIWidget* w = foregroundWidgets[i];
+            if (!w) continue;
+            if (w->getType() == WIDGET_WINDOW) {
+                UIWindow* win = static_cast<UIWindow*>(w);
+                if (win->isVisible()) {
+                    win->setVisible(false);
+                    anyWindowVisible = true;
+                }
+            }
+        }
+        if (anyWindowVisible) {
+            closingToLauncher = true;
+            return;
+        }
         clearForeground();
     }
     smartRefresh();
@@ -603,6 +619,25 @@ void UIManager::tick() {
                 anyDirty = true;
                 break;
             }
+        }
+    }
+    if (closingToLauncher && hasBackgroundLayer && foregroundWidgetCount > 0) {
+        bool anyAnimatingOrVisibleWindow = false;
+        for (int i = 0; i < foregroundWidgetCount; i++) {
+            UIWidget* w = foregroundWidgets[i];
+            if (!w) continue;
+            if (w->getType() == WIDGET_WINDOW) {
+                UIWindow* win = static_cast<UIWindow*>(w);
+                if (win->isAnimating() || win->isVisible()) {
+                    anyAnimatingOrVisibleWindow = true;
+                    break;
+                }
+            }
+        }
+        if (!anyAnimatingOrVisibleWindow) {
+            clearForeground();
+            closingToLauncher = false;
+            anyDirty = true;
         }
     }
     if (!anyUpdateRequested && !anyDirty) return;

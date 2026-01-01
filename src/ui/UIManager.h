@@ -19,6 +19,7 @@ private:
     uint32_t lastAnimationRedrawMs;
     LGFX_Sprite* windowCanvas;
     UIWindow* lastPageWindow;
+    bool closingToLauncher;
 public:
     UIManager();
     ~UIManager();

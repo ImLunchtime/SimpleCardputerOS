@@ -69,7 +69,7 @@ private:
         animProgress.teleport(0.0f);
         auto& spring = animProgress.springOptions();
         spring.visualDuration = 1.2f; 
-        spring.bounce = 0.3f;
+        spring.bounce = 0.5f;
         animProgress.move(1.0f);
     }
     void startCloseAnimation() {
@@ -79,8 +79,8 @@ private:
         contentVisible = false;
         animProgress.teleport(1.0f);
         auto& spring = animProgress.springOptions();
-        spring.visualDuration = 0.15f;
-        spring.bounce = 0.8f;
+        spring.visualDuration = 1.2f;
+        spring.bounce = 0.2f;
         animProgress.move(0.0f);
     }
 public:
@@ -109,7 +109,7 @@ public:
         contentVisible = false;
         animProgress.teleport(0.0f);
         auto& spring = animProgress.springOptions();
-        spring.visualDuration = 1.2f;
+        spring.visualDuration = 1.0f;
         spring.bounce = 0.3f;
         animProgress.move(1.0f);
     }
@@ -133,7 +133,7 @@ public:
             params.y = drawY;
             params.width = drawW;
             params.height = drawH;
-            params.visible = visible;
+            params.visible = visible || animating;
             params.text = title;
             params.textColor = TFT_WHITE;
             params.borderColor = borderColor;
