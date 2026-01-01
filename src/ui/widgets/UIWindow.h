@@ -14,6 +14,12 @@ private:
     bool closing;
     bool contentVisible;
     bool lastVisibleState;
+    bool morphFromPrevious;
+    int morphStartX;
+    int morphStartY;
+    int morphStartW;
+    int morphStartH;
+    bool disableNextCloseAnimation;
     void computeAnimatedRect(int& outX, int& outY, int& outW, int& outH) {
         int targetX = getAbsoluteX();
         int targetY = getAbsoluteY();
@@ -29,6 +35,17 @@ private:
         float p = animProgress.directValue();
         if (p < 0.0f) p = 0.0f;
         if (p > 1.0f) p = 1.0f;
+        if (morphFromPrevious) {
+            int startX = morphStartX;
+            int startY = morphStartY;
+            int startW = morphStartW;
+            int startH = morphStartH;
+            outX = startX + (int)((float)(targetX - startX) * p);
+            outY = startY + (int)((float)(targetY - startY) * p);
+            outW = startW + (int)((float)(targetW - startW) * p);
+            outH = startH + (int)((float)(targetH - startH) * p);
+            return;
+        }
         int startW = targetW / 4;
         int startH = targetH / 4;
         if (startW < 10) startW = targetW / 2;
@@ -70,7 +87,8 @@ public:
     UIWindow(int id, int x, int y, int width, int height, const String& title = "", const String& name = "")
         : UIWidget(id, WIDGET_WINDOW, x, y, width, height, name, false),
           title(title), borderColor(TFT_WHITE), childOffsetX(-6), childOffsetY(-6),
-          animProgress(0.0f), animating(false), opening(false), closing(false), contentVisible(false), lastVisibleState(false) {}
+          animProgress(0.0f), animating(false), opening(false), closing(false), contentVisible(false), lastVisibleState(false),
+          morphFromPrevious(false), morphStartX(0), morphStartY(0), morphStartW(0), morphStartH(0), disableNextCloseAnimation(false) {}
     int getChildOffsetX() const override { return childOffsetX; }
     int getChildOffsetY() const override { return childOffsetY; }
     void setChildOffset(int ox, int oy) { childOffsetX = ox; childOffsetY = oy; }
@@ -79,6 +97,25 @@ public:
     bool shouldDrawContent() const { return contentVisible; }
     bool isAnimating() const { return animating; }
     bool shouldDrawWindow() const { return visible || animating; }
+    void startMorphFromRect(int sx, int sy, int sw, int sh) {
+        morphFromPrevious = true;
+        morphStartX = sx;
+        morphStartY = sy;
+        morphStartW = sw;
+        morphStartH = sh;
+        animating = true;
+        opening = true;
+        closing = false;
+        contentVisible = false;
+        animProgress.teleport(0.0f);
+        auto& spring = animProgress.springOptions();
+        spring.visualDuration = 1.2f;
+        spring.bounce = 0.3f;
+        animProgress.move(1.0f);
+    }
+    void setDisableNextCloseAnimation() {
+        disableNextCloseAnimation = true;
+    }
     void draw(LovyanGFX* display) override {
         if (!display) return;
         if (!visible && !animating) return;
@@ -136,7 +173,12 @@ public:
         if (!lastVisibleState && currentVisible && !animating) {
             startOpenAnimation();
         } else if (lastVisibleState && !currentVisible && !animating) {
-            startCloseAnimation();
+            if (disableNextCloseAnimation) {
+                disableNextCloseAnimation = false;
+                contentVisible = false;
+            } else {
+                startCloseAnimation();
+            }
         }
         lastVisibleState = currentVisible;
         if (!animating) return false;
@@ -148,6 +190,7 @@ public:
                 animating = false;
                 opening = false;
                 contentVisible = true;
+                morphFromPrevious = false;
             }
         } else if (closing) {
             if (p <= 0.01f || animProgress.currentPlayingState() == smooth_ui_toolkit::AnimateState::Completed) {

@@ -223,7 +223,7 @@ bool UIManager::flushDirtyInRoot() {
 }
 
 UIManager::UIManager() : display(&M5Cardputer.Display), widgetCount(0), currentFocus(-1), focusableCount(0),
-                  backgroundWidgetCount(0), foregroundWidgetCount(0), hasBackgroundLayer(false), rootScreen(nullptr), lastAnimationRedrawMs(0), windowCanvas(nullptr) {
+                  backgroundWidgetCount(0), foregroundWidgetCount(0), hasBackgroundLayer(false), rootScreen(nullptr), lastAnimationRedrawMs(0), windowCanvas(nullptr), lastPageWindow(nullptr) {
     for (int i = 0; i < 20; i++) {
         widgets[i] = nullptr;
         focusableWidgets[i] = -1;
@@ -368,11 +368,15 @@ void UIManager::clear() {
     for (int i = 0; i < 20; i++) {
         focusableWidgets[i] = -1;
     }
+    lastPageWindow = nullptr;
 }
 
 void UIManager::clearForeground() {
     for (int i = 0; i < foregroundWidgetCount; i++) {
         if (foregroundWidgets[i]) {
+            if (foregroundWidgets[i] == lastPageWindow) {
+                lastPageWindow = nullptr;
+            }
             removeFromMainList(foregroundWidgets[i]);
             delete foregroundWidgets[i];
             foregroundWidgets[i] = nullptr;
@@ -624,10 +628,36 @@ void UIManager::setWidgetTreeVisible(UIWidget* root, bool visible) {
 }
 
 void UIManager::showPage(UIWidget* root) {
+    if (!root) return;
+    UIWindow* newWindow = nullptr;
+    if (root->getType() == WIDGET_WINDOW) {
+        newWindow = static_cast<UIWindow*>(root);
+    }
+    UIWindow* fromWindow = nullptr;
+    if (newWindow && lastPageWindow && lastPageWindow != newWindow) {
+        fromWindow = lastPageWindow;
+    }
     setWidgetTreeVisible(root, true);
+    if (newWindow) {
+        if (fromWindow) {
+            int sx, sy, sw, sh;
+            fromWindow->getAbsoluteBounds(sx, sy, sw, sh);
+            newWindow->startMorphFromRect(sx, sy, sw, sh);
+        }
+        lastPageWindow = newWindow;
+    }
 }
 
 void UIManager::hidePage(UIWidget* root) {
+    if (!root) return;
+    bool wasVisible = root->isVisible();
+    if (root->getType() == WIDGET_WINDOW) {
+        UIWindow* w = static_cast<UIWindow*>(root);
+        w->setDisableNextCloseAnimation();
+        if (wasVisible) {
+            lastPageWindow = w;
+        }
+    }
     setWidgetTreeVisible(root, false);
 }
 
