@@ -99,6 +99,7 @@ public:
                 currentRemote->ensureCreated(uiManager);
                 UIWindow* remoteWindow = currentRemote->getWindow();
                 if (remoteWindow && remoteWindow->isVisible()) {
+                    deinitEspNow();
                     showMenuView();
                     if (appManager) {
                         appManager->setGlobalEscEnabled(true);
@@ -188,6 +189,15 @@ private:
         espNowInitialized = true;
     }
 
+    void deinitEspNow() {
+        if (!espNowInitialized) {
+            return;
+        }
+        esp_now_deinit();
+        WiFi.mode(WIFI_OFF);
+        espNowInitialized = false;
+    }
+
     void sendEspNowCommand(const char* cmd) {
         if (!cmd) return;
         initEspNow();
@@ -204,4 +214,3 @@ private:
         currentRemote->handleKeyEvent(event, &RemoteApp::sendEspNowCommandStatic, this);
     }
 };
-
