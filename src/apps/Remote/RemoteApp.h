@@ -4,7 +4,8 @@
 #include "ui/UIManager.h"
 #include "system/EventSystem.h"
 #include "system/AppManager.h"
-#include "assets/remote_rover_keyboard_tips.h"
+#include "IRemoteController.h"
+#include "RoverRemoteController.h"
 #include <WiFi.h>
 #include <esp_now.h>
 #include <esp_wifi.h>
@@ -17,18 +18,17 @@ private:
     enum ControlIds {
         MENU_WINDOW_ID = 1,
         MENU_LIST_ID = 2,
-        MENU_STATUS_LABEL_ID = 3,
-        REMOTE_WINDOW_ID = 10,
-        REMOTE_BACK_BUTTON_ID = 11,
-        REMOTE_IMAGE_ID = 12
+        MENU_STATUS_LABEL_ID = 3
     };
 
     UILabel* menuStatusLabel;
     UIMenuList* remoteMenu;
     UIWindow* menuWindow;
 
-    UIWindow* remoteWindow;
-    UIImage* tipsImage;
+    IRemoteController* currentRemote;
+    static const int kRemoteCount = 1;
+    IRemoteController* remotes[kRemoteCount];
+    RoverRemoteController roverRemote;
 
     bool espNowInitialized;
     uint8_t broadcastAddress[6];
@@ -52,9 +52,11 @@ public:
           menuStatusLabel(nullptr),
           remoteMenu(nullptr),
           menuWindow(nullptr),
-          remoteWindow(nullptr),
-          tipsImage(nullptr),
+          currentRemote(nullptr),
+          roverRemote(),
           espNowInitialized(false) {
+        remotes[0] = &roverRemote;
+        currentRemote = remotes[0];
         broadcastAddress[0] = 0xFF;
         broadcastAddress[1] = 0xFF;
         broadcastAddress[2] = 0xFF;
@@ -72,14 +74,18 @@ public:
         remoteMenu->setParent(menuWindow);
         uiManager->addWidget(remoteMenu);
 
-        remoteMenu->addItem("ESP-NOW Rover Remote", 101);
+        for (int i = 0; i < kRemoteCount; i++) {
+            IRemoteController* controller = remotes[i];
+            if (controller) {
+                remoteMenu->addItem(controller->getMenuText(), controller->getMenuItemId());
+                controller->ensureCreated(uiManager);
+                UIWindow* window = controller->getWindow();
+                if (window) {
+                    uiManager->setWidgetTreeVisible(window, false);
+                }
+            }
+        }
         remoteMenu->setColors(TFT_GREEN, TFT_YELLOW, TFT_WHITE, TFT_DARKGREY);
-
-        remoteWindow = uiManager->createWindow(REMOTE_WINDOW_ID, 30, 20, 144, 100, "ESP-NOW Rover Remote", "RoverWindow");
-
-        tipsImage = uiManager->createImage(REMOTE_IMAGE_ID, 15, 42, 128, 60, remote_rover_keyboard_tips, remote_rover_keyboard_tips_size, "TipsImage", remoteWindow);
-
-        uiManager->setWidgetTreeVisible(remoteWindow, false);
 
         uiManager->nextFocus();
     }
@@ -89,17 +95,25 @@ public:
 
     void onKeyEvent(const KeyEvent& event) override {
         if (event.esc) {
-            if (remoteWindow && remoteWindow->isVisible()) {
-                showMenuView();
-                if (appManager) {
-                    appManager->setGlobalEscEnabled(true);
+            if (currentRemote) {
+                currentRemote->ensureCreated(uiManager);
+                UIWindow* remoteWindow = currentRemote->getWindow();
+                if (remoteWindow && remoteWindow->isVisible()) {
+                    showMenuView();
+                    if (appManager) {
+                        appManager->setGlobalEscEnabled(true);
+                    }
+                    return;
                 }
-                return;
             }
         }
-        if (remoteWindow && remoteWindow->isVisible()) {
-            handleRemoteKeyEvent(event);
-            return;
+        if (currentRemote) {
+            currentRemote->ensureCreated(uiManager);
+            UIWindow* remoteWindow = currentRemote->getWindow();
+            if (remoteWindow && remoteWindow->isVisible()) {
+                handleRemoteKeyEvent(event);
+                return;
+            }
         }
         if (uiManager->handleKeyEvent(event)) {
             uiManager->refreshAppArea();
@@ -108,13 +122,25 @@ public:
 
     void handleRemoteSelection(MenuItem* item) {
         if (!item) return;
-        if (item->id == 101) {
+        IRemoteController* selected = nullptr;
+        for (int i = 0; i < kRemoteCount; i++) {
+            IRemoteController* controller = remotes[i];
+            if (controller && controller->getMenuItemId() == item->id) {
+                selected = controller;
+                break;
+            }
+        }
+        if (selected) {
+            currentRemote = selected;
             showRemoteView();
         }
     }
 
     void showRemoteView() {
-        if (!menuWindow || !remoteWindow) return;
+        if (!menuWindow || !currentRemote) return;
+        currentRemote->ensureCreated(uiManager);
+        UIWindow* remoteWindow = currentRemote->getWindow();
+        if (!remoteWindow) return;
         uiManager->hidePage(menuWindow);
         uiManager->showPage(remoteWindow);
         if (appManager) {
@@ -125,13 +151,22 @@ public:
     }
 
     void showMenuView() {
-        if (!menuWindow || !remoteWindow) return;
+        if (!menuWindow || !currentRemote) return;
+        currentRemote->ensureCreated(uiManager);
+        UIWindow* remoteWindow = currentRemote->getWindow();
+        if (!remoteWindow) return;
         uiManager->hidePage(remoteWindow);
         uiManager->showPage(menuWindow);
         uiManager->refresh();
     }
 
 private:
+    static void sendEspNowCommandStatic(const char* cmd, void* ctx) {
+        if (!ctx) return;
+        RemoteApp* app = static_cast<RemoteApp*>(ctx);
+        app->sendEspNowCommand(cmd);
+    }
+
     void initEspNow() {
         if (espNowInitialized) {
             return;
@@ -163,47 +198,10 @@ private:
     }
 
     void handleRemoteKeyEvent(const KeyEvent& event) {
-        if (!event.text.isEmpty()) {
-            char key = event.text.charAt(0);
-            if (key >= 'a' && key <= 'z') {
-                key = static_cast<char>(key - 'a' + 'A');
-            }
-            if (key == 'E') {
-                sendEspNowCommand("C_FD");
-                return;
-            }
-            if (key == 'A') {
-                sendEspNowCommand("C_LS");
-                return;
-            }
-            if (key == 'S') {
-                sendEspNowCommand("C_BK");
-                return;
-            }
-            if (key == 'D') {
-                sendEspNowCommand("C_RS");
-                return;
-            }
-            if (key == 'K') {
-                sendEspNowCommand("C_TL");
-                return;
-            }
-            if (key == 'L') {
-                sendEspNowCommand("C_TR");
-                return;
-            }
+        if (!currentRemote) {
+            return;
         }
-        if (event.text.isEmpty() &&
-            !event.enter &&
-            !event.del &&
-            !event.tab &&
-            !event.up &&
-            !event.down &&
-            !event.left &&
-            !event.right &&
-            !event.esc) {
-            sendEspNowCommand("C_ST");
-        }
+        currentRemote->handleKeyEvent(event, &RemoteApp::sendEspNowCommandStatic, this);
     }
 };
 
