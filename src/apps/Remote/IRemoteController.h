@@ -14,5 +14,5 @@ public:
     virtual UIWindow* getWindow() const = 0;
 
     virtual void handleKeyEvent(const KeyEvent& event, void (*sendCommand)(const char* cmd, void* ctx), void* ctx) = 0;
+    virtual void update() {}
 };
-

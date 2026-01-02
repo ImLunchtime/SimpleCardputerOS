@@ -49,7 +49,13 @@ public:
         SPI.begin(SD_SPI_SCK_PIN, SD_SPI_MISO_PIN, SD_SPI_MOSI_PIN, SD_SPI_CS_PIN);
         
         if (!SD.begin(SD_SPI_CS_PIN, SPI, 25000000)) {
-            return false;
+            const int loraDisablePin = 5;
+            pinMode(loraDisablePin, OUTPUT);
+            digitalWrite(loraDisablePin, HIGH);
+            
+            if (!SD.begin(SD_SPI_CS_PIN, SPI, 25000000)) {
+                return false;
+            }
         }
         
         initialized = true;

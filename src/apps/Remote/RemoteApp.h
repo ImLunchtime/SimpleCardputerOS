@@ -6,6 +6,7 @@
 #include "system/AppManager.h"
 #include "IRemoteController.h"
 #include "RoverRemoteController.h"
+#include "CapGNSSRemoteController.h"
 #include <WiFi.h>
 #include <esp_now.h>
 #include <esp_wifi.h>
@@ -26,9 +27,10 @@ private:
     UIWindow* menuWindow;
 
     IRemoteController* currentRemote;
-    static const int kRemoteCount = 1;
+    static const int kRemoteCount = 2;
     IRemoteController* remotes[kRemoteCount];
     RoverRemoteController roverRemote;
+    CapGNSSRemoteController gnssRemote;
 
     bool espNowInitialized;
     uint8_t broadcastAddress[6];
@@ -54,8 +56,10 @@ public:
           menuWindow(nullptr),
           currentRemote(nullptr),
           roverRemote(),
+          gnssRemote(),
           espNowInitialized(false) {
         remotes[0] = &roverRemote;
+        remotes[1] = &gnssRemote;
         currentRemote = remotes[0];
         broadcastAddress[0] = 0xFF;
         broadcastAddress[1] = 0xFF;
@@ -91,6 +95,13 @@ public:
     }
 
     void loop() override {
+        if (currentRemote) {
+            currentRemote->ensureCreated(uiManager);
+            UIWindow* remoteWindow = currentRemote->getWindow();
+            if (remoteWindow && remoteWindow->isVisible()) {
+                currentRemote->update();
+            }
+        }
     }
 
     void onKeyEvent(const KeyEvent& event) override {
@@ -148,6 +159,10 @@ public:
             appManager->setGlobalEscEnabled(false);
         }
         uiManager->refresh();
+        TipManager* tip = appManager ? appManager->getTipManager() : nullptr;
+        if (tip) {
+            tip->showTwoLabel("Initializing device", "Please wait...", 800, false);
+        }
         sendEspNowCommand("C_ST");
     }
 
