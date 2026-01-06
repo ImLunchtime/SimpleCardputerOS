@@ -170,7 +170,7 @@ private:
             } else if (name == "test" || display == "Test") {
                 gridMenu->addImageItem(icon_test_png, icon_test_png_size, itemId);
                 added = true;
-            } else if (name == "remote" || display == "Remote" || display == "Remote") {
+            } else if (name == "toolbox" || display == "Toolbox") {
                 gridMenu->addImageItem(icon_remote, icon_remote_size, itemId);
                 added = true;
             } else if (name == "settings" || display == "Settings") {

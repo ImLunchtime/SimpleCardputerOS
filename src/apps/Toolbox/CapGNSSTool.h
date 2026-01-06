@@ -1,12 +1,12 @@
 #pragma once
 
-#include "IRemoteController.h"
+#include "ITool.h"
 #include <M5Cardputer.h>
 #include "MultipleSatellite.h"
 
-class CapGNSSRemoteController : public IRemoteController {
+class CapGNSSTool : public ITool {
 public:
-    CapGNSSRemoteController()
+    CapGNSSTool()
         : window(nullptr),
           statusLabel(nullptr),
           satInfoLabel(nullptr),

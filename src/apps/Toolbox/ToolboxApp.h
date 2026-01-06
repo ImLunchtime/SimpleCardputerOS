@@ -4,15 +4,15 @@
 #include "ui/UIManager.h"
 #include "system/EventSystem.h"
 #include "system/AppManager.h"
-#include "IRemoteController.h"
-#include "RoverRemoteController.h"
-#include "CapGNSSRemoteController.h"
+#include "ITool.h"
+#include "RoverRemoteTool.h"
+#include "CapGNSSTool.h"
 #include <WiFi.h>
 #include <esp_now.h>
 #include <esp_wifi.h>
 #include <cstring>
 
-class RemoteApp : public App {
+class ToolboxApp : public App {
 private:
     EventSystem* eventSystem;
 
@@ -23,44 +23,44 @@ private:
     };
 
     UILabel* menuStatusLabel;
-    UIMenuList* remoteMenu;
+    UIMenuList* toolMenu;
     UIWindow* menuWindow;
 
-    IRemoteController* currentRemote;
-    static const int kRemoteCount = 2;
-    IRemoteController* remotes[kRemoteCount];
-    RoverRemoteController roverRemote;
-    CapGNSSRemoteController gnssRemote;
+    ITool* currentTool;
+    static const int kToolCount = 2;
+    ITool* tools[kToolCount];
+    RoverRemoteTool roverRemoteTool;
+    CapGNSSTool gnssTool;
 
     bool espNowInitialized;
     uint8_t broadcastAddress[6];
 
-    class RemoteMenuList : public UIMenuList {
+    class ToolMenuList : public UIMenuList {
     public:
-        RemoteMenuList(int id, int x, int y, int width, int height, const String& name, RemoteApp* app)
+        ToolMenuList(int id, int x, int y, int width, int height, const char* name, ToolboxApp* app)
             : UIMenuList(id, x, y, width, height, name), parentApp(app) {}
 
         void onItemSelected(MenuItem* item) override {
-            parentApp->handleRemoteSelection(item);
+            parentApp->handleToolSelection(item);
         }
 
     private:
-        RemoteApp* parentApp;
+        ToolboxApp* parentApp;
     };
 
 public:
-    RemoteApp(EventSystem* events)
+    ToolboxApp(EventSystem* events)
         : eventSystem(events),
           menuStatusLabel(nullptr),
-          remoteMenu(nullptr),
+          toolMenu(nullptr),
           menuWindow(nullptr),
-          currentRemote(nullptr),
-          roverRemote(),
-          gnssRemote(),
+          currentTool(nullptr),
+          roverRemoteTool(),
+          gnssTool(),
           espNowInitialized(false) {
-        remotes[0] = &roverRemote;
-        remotes[1] = &gnssRemote;
-        currentRemote = remotes[0];
+        tools[0] = &roverRemoteTool;
+        tools[1] = &gnssTool;
+        currentTool = tools[0];
         broadcastAddress[0] = 0xFF;
         broadcastAddress[1] = 0xFF;
         broadcastAddress[2] = 0xFF;
@@ -70,46 +70,46 @@ public:
     }
 
     void setup() override {
-        menuWindow = uiManager->createWindow(MENU_WINDOW_ID, 30, 20, 180, 100, "Remote", "RemoteMenuWindow");
+        menuWindow = uiManager->createWindow(MENU_WINDOW_ID, 30, 20, 180, 100, "Tool", "ToolMenuWindow");
 
-        menuStatusLabel = uiManager->createLabel(MENU_STATUS_LABEL_ID, 15, 25, "Select a remote:", "RemoteStatus", menuWindow);
+        menuStatusLabel = uiManager->createLabel(MENU_STATUS_LABEL_ID, 15, 25, "Select a tool:", "ToolStatus", menuWindow);
 
-        remoteMenu = new RemoteMenuList(MENU_LIST_ID, 15, 40, 140, 50, "RemoteList", this);
-        remoteMenu->setParent(menuWindow);
-        uiManager->addWidget(remoteMenu);
+        toolMenu = new ToolMenuList(MENU_LIST_ID, 15, 40, 140, 50, "ToolList", this);
+        toolMenu->setParent(menuWindow);
+        uiManager->addWidget(toolMenu);
 
-        for (int i = 0; i < kRemoteCount; i++) {
-            IRemoteController* controller = remotes[i];
-            if (controller) {
-                remoteMenu->addItem(controller->getMenuText(), controller->getMenuItemId());
-                controller->ensureCreated(uiManager);
-                UIWindow* window = controller->getWindow();
+        for (int i = 0; i < kToolCount; i++) {
+            ITool* tool = tools[i];
+            if (tool) {
+                toolMenu->addItem(tool->getMenuText(), tool->getMenuItemId());
+                tool->ensureCreated(uiManager);
+                UIWindow* window = tool->getWindow();
                 if (window) {
                     uiManager->setWidgetTreeVisible(window, false);
                 }
             }
         }
-        remoteMenu->setColors(TFT_GREEN, TFT_YELLOW, TFT_WHITE, TFT_DARKGREY);
+        toolMenu->setColors(TFT_GREEN, TFT_YELLOW, TFT_WHITE, TFT_DARKGREY);
 
         uiManager->nextFocus();
     }
 
     void loop() override {
-        if (currentRemote) {
-            currentRemote->ensureCreated(uiManager);
-            UIWindow* remoteWindow = currentRemote->getWindow();
-            if (remoteWindow && remoteWindow->isVisible()) {
-                currentRemote->update();
+        if (currentTool) {
+            currentTool->ensureCreated(uiManager);
+            UIWindow* toolWindow = currentTool->getWindow();
+            if (toolWindow && toolWindow->isVisible()) {
+                currentTool->update();
             }
         }
     }
 
     void onKeyEvent(const KeyEvent& event) override {
         if (event.esc) {
-            if (currentRemote) {
-                currentRemote->ensureCreated(uiManager);
-                UIWindow* remoteWindow = currentRemote->getWindow();
-                if (remoteWindow && remoteWindow->isVisible()) {
+            if (currentTool) {
+                currentTool->ensureCreated(uiManager);
+                UIWindow* toolWindow = currentTool->getWindow();
+                if (toolWindow && toolWindow->isVisible()) {
                     deinitEspNow();
                     showMenuView();
                     if (appManager) {
@@ -119,11 +119,11 @@ public:
                 }
             }
         }
-        if (currentRemote) {
-            currentRemote->ensureCreated(uiManager);
-            UIWindow* remoteWindow = currentRemote->getWindow();
-            if (remoteWindow && remoteWindow->isVisible()) {
-                handleRemoteKeyEvent(event);
+        if (currentTool) {
+            currentTool->ensureCreated(uiManager);
+            UIWindow* toolWindow = currentTool->getWindow();
+            if (toolWindow && toolWindow->isVisible()) {
+                handleToolKeyEvent(event);
                 return;
             }
         }
@@ -132,29 +132,29 @@ public:
         }
     }
 
-    void handleRemoteSelection(MenuItem* item) {
+    void handleToolSelection(MenuItem* item) {
         if (!item) return;
-        IRemoteController* selected = nullptr;
-        for (int i = 0; i < kRemoteCount; i++) {
-            IRemoteController* controller = remotes[i];
-            if (controller && controller->getMenuItemId() == item->id) {
-                selected = controller;
+        ITool* selected = nullptr;
+        for (int i = 0; i < kToolCount; i++) {
+            ITool* tool = tools[i];
+            if (tool && tool->getMenuItemId() == item->id) {
+                selected = tool;
                 break;
             }
         }
         if (selected) {
-            currentRemote = selected;
-            showRemoteView();
+            currentTool = selected;
+            showToolView();
         }
     }
 
-    void showRemoteView() {
-        if (!menuWindow || !currentRemote) return;
-        currentRemote->ensureCreated(uiManager);
-        UIWindow* remoteWindow = currentRemote->getWindow();
-        if (!remoteWindow) return;
+    void showToolView() {
+        if (!menuWindow || !currentTool) return;
+        currentTool->ensureCreated(uiManager);
+        UIWindow* toolWindow = currentTool->getWindow();
+        if (!toolWindow) return;
         uiManager->hidePage(menuWindow);
-        uiManager->showPage(remoteWindow);
+        uiManager->showPage(toolWindow);  
         if (appManager) {
             appManager->setGlobalEscEnabled(false);
         }
@@ -167,11 +167,11 @@ public:
     }
 
     void showMenuView() {
-        if (!menuWindow || !currentRemote) return;
-        currentRemote->ensureCreated(uiManager);
-        UIWindow* remoteWindow = currentRemote->getWindow();
-        if (!remoteWindow) return;
-        uiManager->hidePage(remoteWindow);
+        if (!menuWindow || !currentTool) return;
+        currentTool->ensureCreated(uiManager);
+        UIWindow* toolWindow = currentTool->getWindow();
+        if (!toolWindow) return;
+        uiManager->hidePage(toolWindow);
         uiManager->showPage(menuWindow);
         uiManager->refresh();
     }
@@ -179,7 +179,7 @@ public:
 private:
     static void sendEspNowCommandStatic(const char* cmd, void* ctx) {
         if (!ctx) return;
-        RemoteApp* app = static_cast<RemoteApp*>(ctx);
+        ToolboxApp* app = static_cast<ToolboxApp*>(ctx);
         app->sendEspNowCommand(cmd);
     }
 
@@ -222,10 +222,10 @@ private:
         esp_now_send(broadcastAddress, reinterpret_cast<const uint8_t*>(cmd), len);
     }
 
-    void handleRemoteKeyEvent(const KeyEvent& event) {
-        if (!currentRemote) {
+    void handleToolKeyEvent(const KeyEvent& event) {
+        if (!currentTool) {
             return;
         }
-        currentRemote->handleKeyEvent(event, &RemoteApp::sendEspNowCommandStatic, this);
+        currentTool->handleKeyEvent(event, &ToolboxApp::sendEspNowCommandStatic, this);
     }
 };

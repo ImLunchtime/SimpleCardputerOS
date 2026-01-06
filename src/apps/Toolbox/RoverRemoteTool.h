@@ -1,11 +1,11 @@
 #pragma once
 
-#include "IRemoteController.h"
+#include "ITool.h"
 #include "assets/remote_rover_keyboard_tips.h"
 
-class RoverRemoteController : public IRemoteController {
+class RoverRemoteTool : public ITool {
 public:
-    RoverRemoteController()
+    RoverRemoteTool()
         : window(nullptr),
           tipsImage(nullptr) {
     }
@@ -22,7 +22,7 @@ public:
         if (window) {
             return;
         }
-        window = uiManager->createWindow(REMOTE_WINDOW_ID, 30, 20, 144, 100, "ESP-NOW Rover Remote", "RoverWindow");
+        window = uiManager->createWindow(REMOTE_WINDOW_ID, 30, 20, 144, 100, "ESP-NOW RoverRemote Remote", "RoverRemoteWindow");
         tipsImage = uiManager->createImage(REMOTE_IMAGE_ID, 15, 42, 128, 60, remote_rover_keyboard_tips, remote_rover_keyboard_tips_size, "TipsImage", window);
         uiManager->setWidgetTreeVisible(window, false);
     }

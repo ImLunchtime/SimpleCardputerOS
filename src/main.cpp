@@ -6,7 +6,7 @@
 #include "apps/Settings/SettingsApp.h"
 #include "apps/Test/TestApp.h"
 #include "apps/FileManager/FileManagerApp.h"
-#include "apps/Remote/RemoteApp.h"
+#include "apps/Toolbox/ToolboxApp.h"
 #include "themes/ThemeManager.h"
 #include "themes/PrototypeTheme.h"
 #include "themes/DarkTheme.h"
@@ -57,7 +57,7 @@ MusicApp musicApp(&globalEventSystem, &globalAppManager);
 SettingsApp settingsApp(&globalEventSystem);
 TestApp testApp(&globalEventSystem);
 FileManagerApp fileManagerApp(&globalEventSystem, &globalAppManager);
-RemoteApp remoteApp(&globalEventSystem);
+ToolboxApp ToolboxApp(&globalEventSystem);
 
 void setup() {
   auto cfg = M5.config();
@@ -86,7 +86,7 @@ void setup() {
   globalAppManager.registerApp("settings", "Settings", &settingsApp);
   globalAppManager.registerApp("filemanager", "Files", &fileManagerApp);
   globalAppManager.registerApp("test", "Test", &testApp);
-  globalAppManager.registerApp("remote", "Remote", &remoteApp);
+  globalAppManager.registerApp("toolbox", "Toolbox", &ToolboxApp);
 
   globalAppManager.initialize();
 }

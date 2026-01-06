@@ -3,9 +3,9 @@
 #include "ui/UIManager.h"
 #include "system/EventSystem.h"
 
-class IRemoteController {
+class ITool {
 public:
-    virtual ~IRemoteController() {}
+    virtual ~ITool() {}
 
     virtual const char* getMenuText() const = 0;
     virtual int getMenuItemId() const = 0;
