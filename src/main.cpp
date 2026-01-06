@@ -4,8 +4,6 @@
 #include "apps/Launcher/LauncherApp.h"
 #include "apps/Music/MusicApp.h"
 #include "apps/Settings/SettingsApp.h"
-#include "apps/Test/TestApp.h"
-#include "apps/FileManager/FileManagerApp.h"
 #include "apps/Toolbox/ToolboxApp.h"
 #include "themes/ThemeManager.h"
 #include "themes/PrototypeTheme.h"
@@ -55,8 +53,6 @@ ThemeManager* globalThemeManager = &globalThemeManagerInstance;
 LauncherApp launcherApp(&globalEventSystem);
 MusicApp musicApp(&globalEventSystem, &globalAppManager);
 SettingsApp settingsApp(&globalEventSystem);
-TestApp testApp(&globalEventSystem);
-FileManagerApp fileManagerApp(&globalEventSystem, &globalAppManager);
 ToolboxApp ToolboxApp(&globalEventSystem);
 
 void setup() {
@@ -84,8 +80,6 @@ void setup() {
   globalAppManager.registerApp("launcher", "Launcher", &launcherApp, true);
   globalAppManager.registerApp("music", "Music", &musicApp);
   globalAppManager.registerApp("settings", "Settings", &settingsApp);
-  globalAppManager.registerApp("filemanager", "Files", &fileManagerApp);
-  globalAppManager.registerApp("test", "Test", &testApp);
   globalAppManager.registerApp("toolbox", "Toolbox", &ToolboxApp);
 
   globalAppManager.initialize();

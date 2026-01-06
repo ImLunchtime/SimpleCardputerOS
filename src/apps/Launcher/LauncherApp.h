@@ -4,10 +4,8 @@
 #include "system/EventSystem.h"
 #include "system/AppManager.h"
 #include "system/BatteryManager.h"
-#include "assets/icon_files.h"
 #include "assets/icon_music_sd.h"
-#include "assets/icon_test.h"
-#include "assets/icon_remote.h"
+#include "assets/icon_toolbox.h"
 #include "assets/icon_settings.h"
 
 class LauncherApp : public App {
@@ -161,17 +159,11 @@ private:
             int itemId = i + 100; // 与选择处理保持一致
 
             bool added = false;
-            if (name == "filemanager" || display == "Files") {
-                gridMenu->addImageItem(icon_files_png, icon_files_png_size, itemId);
-                added = true;
-            } else if (name == "music" || display == "Music") {
+            if (name == "music" || display == "Music") {
                 gridMenu->addImageItem(icon_music_sd_png, icon_music_sd_png_size, itemId);
                 added = true;
-            } else if (name == "test" || display == "Test") {
-                gridMenu->addImageItem(icon_test_png, icon_test_png_size, itemId);
-                added = true;
             } else if (name == "toolbox" || display == "Toolbox") {
-                gridMenu->addImageItem(icon_remote, icon_remote_size, itemId);
+                gridMenu->addImageItem(icon_toolbox, icon_toolbox_size, itemId);
                 added = true;
             } else if (name == "settings" || display == "Settings") {
                 gridMenu->addImageItem(icon_settings, icon_settings_size, itemId);
