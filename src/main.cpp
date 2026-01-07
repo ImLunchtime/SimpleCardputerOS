@@ -53,7 +53,7 @@ ThemeManager* globalThemeManager = &globalThemeManagerInstance;
 LauncherApp launcherApp(&globalEventSystem);
 MusicApp musicApp(&globalEventSystem, &globalAppManager);
 SettingsApp settingsApp(&globalEventSystem);
-ToolboxApp ToolboxApp(&globalEventSystem);
+ToolboxApp toolboxApp(&globalEventSystem);
 
 void setup() {
   auto cfg = M5.config();
@@ -80,7 +80,7 @@ void setup() {
   globalAppManager.registerApp("launcher", "Launcher", &launcherApp, true);
   globalAppManager.registerApp("music", "Music", &musicApp);
   globalAppManager.registerApp("settings", "Settings", &settingsApp);
-  globalAppManager.registerApp("toolbox", "Toolbox", &ToolboxApp);
+  globalAppManager.registerApp("toolbox", "Toolbox", &toolboxApp);
 
   globalAppManager.initialize();
 }

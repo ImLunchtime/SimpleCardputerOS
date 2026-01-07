@@ -1,0 +1,16 @@
+{
+  "audio_template": [
+    "wc_start.mp3",
+    "$线路",
+    "wc_boundfor.mp3",
+    "$本线路终点站",
+    "wc_nextstop.mp3",
+    "$下一站"
+  ],
+  "tips_buttons": [
+    { "label": "Friendly Tip 1", "audio": "tips1.mp3" }
+  ],
+  "routes": [
+    { "id": "line1", "name": "1号线" }
+  ]
+}
