@@ -4,15 +4,16 @@
 #include "system/EventSystem.h"
 class UIManager {
 private:
+    static const int kMaxWidgets = 40;
     LovyanGFX* display;
-    UIWidget* widgets[20];
+    UIWidget* widgets[kMaxWidgets];
     int widgetCount;
     int currentFocus;
-    int focusableWidgets[20];
+    int focusableWidgets[kMaxWidgets];
     int focusableCount;
-    UIWidget* backgroundWidgets[20];
+    UIWidget* backgroundWidgets[kMaxWidgets];
     int backgroundWidgetCount;
-    UIWidget* foregroundWidgets[20];
+    UIWidget* foregroundWidgets[kMaxWidgets];
     int foregroundWidgetCount;
     bool hasBackgroundLayer;
     UIScreen* rootScreen;

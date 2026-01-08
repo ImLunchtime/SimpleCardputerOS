@@ -224,7 +224,7 @@ bool UIManager::flushDirtyInRoot() {
 
 UIManager::UIManager() : display(&M5Cardputer.Display), widgetCount(0), currentFocus(-1), focusableCount(0),
                   backgroundWidgetCount(0), foregroundWidgetCount(0), hasBackgroundLayer(false), rootScreen(nullptr), lastAnimationRedrawMs(0), windowCanvas(nullptr), lastPageWindow(nullptr), closingToLauncher(false) {
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < kMaxWidgets; i++) {
         widgets[i] = nullptr;
         focusableWidgets[i] = -1;
         backgroundWidgets[i] = nullptr;
@@ -282,12 +282,12 @@ void UIManager::drawWidgetClippedOn(LovyanGFX* target, UIWidget* widget, bool pa
 }
 
 void UIManager::addWidget(UIWidget* widget) {
-    if (widgetCount < 20 && widget != nullptr) {
+    if (widgetCount < kMaxWidgets && widget != nullptr) {
         if (widget->getParent() == nullptr) {
             widget->setParent(rootScreen);
         }
         widgets[widgetCount] = widget;
-        if (hasBackgroundLayer && foregroundWidgetCount < 20) {
+        if (hasBackgroundLayer && foregroundWidgetCount < kMaxWidgets) {
             foregroundWidgets[foregroundWidgetCount] = widget;
             foregroundWidgetCount++;
             if (widget->isFocusable()) {
@@ -365,7 +365,7 @@ void UIManager::clear() {
     widgetCount = 0;
     focusableCount = 0;
     currentFocus = -1;
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < kMaxWidgets; i++) {
         focusableWidgets[i] = -1;
     }
     lastPageWindow = nullptr;
@@ -388,7 +388,7 @@ void UIManager::clearForeground() {
 
 void UIManager::saveToBackground() {
     for (int i = 0; i < widgetCount; i++) {
-        if (widgets[i] && backgroundWidgetCount < 20) {
+        if (widgets[i] && backgroundWidgetCount < kMaxWidgets) {
             backgroundWidgets[backgroundWidgetCount] = widgets[i];
             backgroundWidgetCount++;
         }
