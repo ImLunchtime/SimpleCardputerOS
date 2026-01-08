@@ -5,12 +5,8 @@
 class UIMenuList : public UIMenu {
 private:
     int itemHeight;
-    int scrollOffset;
     int visibleItems;
-    float scrollPixel;
-    float targetScrollPixel;
-    bool animating;
-    smooth_ui_toolkit::AnimateValue scrollAnim;
+    smooth_ui_toolkit::SmoothSelectorMenu* smoothMenu;
     String clipText(const String& text, int maxWidth) {
         if (text.length() == 0) return text;
         int availableWidth = maxWidth - 8;
@@ -24,24 +20,67 @@ private:
         }
         return text.substring(0, maxChars) + "...";
     }
-    void setScrollOffsetAnimated(int newScrollOffset) {
-        float current = animating ? scrollAnim.directValue() : ((float)scrollOffset * (float)itemHeight);
-        scrollOffset = newScrollOffset;
-        targetScrollPixel = (float)scrollOffset * (float)itemHeight;
-        scrollAnim.teleport(current);
-        auto& spring = scrollAnim.springOptions();
-        spring.visualDuration = 1.2f;
-        spring.bounce = 0.2f;
-        scrollAnim.move(targetScrollPixel);
-        scrollPixel = current;
-        animating = true;
-        invalidate();
+    void rebuildSmoothMenuLayout() {
+        int contentW = width - 2;
+        int contentH = height - 2;
+        if (smoothMenu) {
+            delete smoothMenu;
+            smoothMenu = nullptr;
+        }
+        if (contentW <= 0 || contentH <= 0 || itemHeight <= 0 || itemCount <= 0) {
+            return;
+        }
+        smoothMenu = new smooth_ui_toolkit::SmoothSelectorMenu();
+        smooth_ui_toolkit::SmoothSelectorMenu::Config_t cfg;
+        cfg.moveInLoop = false;
+        cfg.cameraSize = smooth_ui_toolkit::Vector2((float)contentW, (float)contentH);
+        cfg.readInputInterval = 16;
+        cfg.renderInterval = 16;
+        smoothMenu->setConfig(cfg);
+        for (int i = 0; i < itemCount; i++) {
+            smooth_ui_toolkit::SmoothSelectorMenu::Option_t option;
+            option.keyframe =
+                smooth_ui_toolkit::Vector4(0.0f, (float)(i * itemHeight), (float)contentW, (float)itemHeight);
+            option.userData = nullptr;
+            smoothMenu->addOption(option);
+        }
+        if (selectedIndex >= 0 && selectedIndex < itemCount) {
+            smoothMenu->jumpTo(selectedIndex);
+        }
     }
 public:
     UIMenuList(int id, int x, int y, int width, int height, const String& name = "")
         : UIMenu(id, WIDGET_MENU_LIST, x, y, width, height, name),
-          itemHeight(18), scrollOffset(0), scrollPixel(0.0f), targetScrollPixel(0.0f), animating(false) {
+          itemHeight(18),
+          smoothMenu(nullptr) {
         visibleItems = (height - 4) / itemHeight;
+        rebuildSmoothMenuLayout();
+    }
+    ~UIMenuList() override {
+        if (smoothMenu) {
+            delete smoothMenu;
+            smoothMenu = nullptr;
+        }
+    }
+    void addItem(const String& text, int itemId, bool enabled = true) {
+        UIMenu::addItem(text, itemId, enabled);
+        rebuildSmoothMenuLayout();
+    }
+    void addImageItem(const uint8_t* data, size_t dataSize, int itemId, bool enabled = true) {
+        UIMenu::addImageItem(data, dataSize, itemId, enabled);
+        rebuildSmoothMenuLayout();
+    }
+    void addImageItemFromFile(const String& filePath, int itemId, bool enabled = true) {
+        UIMenu::addImageItemFromFile(filePath, itemId, enabled);
+        rebuildSmoothMenuLayout();
+    }
+    void removeItem(int itemId) {
+        UIMenu::removeItem(itemId);
+        rebuildSmoothMenuLayout();
+    }
+    void clear() {
+        UIMenu::clear();
+        rebuildSmoothMenuLayout();
     }
     void draw(LovyanGFX* display) override {
         if (!visible) return;
@@ -52,22 +91,16 @@ public:
         int contentY = absY + 1;
         int contentW = width - 2;
         int contentH = height - 2;
-
-        float sp = animating ? scrollPixel : ((float)scrollOffset * (float)itemHeight);
-        if (sp < 0.0f) sp = 0.0f;
-        int maxTopIndex = max(0, itemCount - visibleItems);
-        float maxSp = (float)maxTopIndex * (float)itemHeight;
-        if (sp > maxSp) sp = maxSp;
-
-        int firstIndex = itemHeight > 0 ? (int)(sp / (float)itemHeight) : 0;
-        int yOffset = itemHeight > 0 ? -(int)(sp - (float)firstIndex * (float)itemHeight) : 0;
-        int drawCount = min(itemCount - firstIndex, visibleItems + 2);
-
-        for (int i = 0; i < drawCount; i++) {
-            int itemIndex = firstIndex + i;
-            if (itemIndex >= itemCount || itemIndex < 0 || !items[itemIndex]) continue;
-            MenuItem* item = items[itemIndex];
-            int itemY = contentY + yOffset + i * itemHeight;
+        smooth_ui_toolkit::Vector2 cameraOffset(0.0f, 0.0f);
+        if (smoothMenu) {
+            cameraOffset = smoothMenu->getCameraOffset();
+        }
+        int cameraY = (int)cameraOffset.y;
+        for (int i = 0; i < itemCount; i++) {
+            if (!items[i]) continue;
+            MenuItem* item = items[i];
+            int itemLocalY = i * itemHeight - cameraY;
+            int itemY = contentY + itemLocalY;
             if (itemY + itemHeight < contentY || itemY > contentY + contentH) continue;
             Theme* currentTheme = getCurrentTheme();
             if (currentTheme) {
@@ -78,18 +111,18 @@ public:
                 params.width = contentW;
                 params.height = itemHeight;
                 params.text = clipText(item->text, width - 2);
-                params.selected = (focused && itemIndex == selectedIndex);
+                params.selected = (focused && i == selectedIndex);
                 params.enabled = item->enabled;
                 params.selectedColor = selectedColor;
                 params.textColor = textColor;
                 params.disabledColor = disabledColor;
                 currentTheme->drawMenuItem(params);
             } else {
-                if (focused && itemIndex == selectedIndex) {
+                if (focused && i == selectedIndex) {
                     display->fillRect(contentX, itemY, contentW, itemHeight, selectedColor);
                 }
                 uint16_t color = item->enabled ? textColor : disabledColor;
-                if (focused && itemIndex == selectedIndex) {
+                if (focused && i == selectedIndex) {
                     color = TFT_BLACK;
                 }
                 display->setFont(&fonts::efontCN_12);
@@ -102,40 +135,27 @@ public:
         }
     }
     bool update(uint32_t nowMs) override {
-        if (!visible || itemHeight <= 0) return false;
-        if (!animating) return false;
-        float currentTimeS = (float)nowMs / 1000.0f;
-        scrollAnim.update(currentTimeS);
-        float newValue = scrollAnim.directValue();
-        scrollPixel = newValue;
-        float diff = targetScrollPixel - scrollPixel;
-        float absDiff = diff >= 0.0f ? diff : -diff;
-        if (absDiff < 0.5f || scrollAnim.currentPlayingState() == smooth_ui_toolkit::AnimateState::Completed) {
-            scrollPixel = targetScrollPixel;
-            animating = false;
-        }
-        return true;
+        if (!visible || itemHeight <= 0 || itemCount == 0) return false;
+        if (!smoothMenu) return false;
+        smoothMenu->update(nowMs);
+        bool selectorMoving = !smoothMenu->getSelectorPostion().done();
+        bool shapeChanging = !smoothMenu->getSelectorShape().done();
+        bool cameraMoving = !smoothMenu->getCamera().done();
+        return selectorMoving || shapeChanging || cameraMoving;
     }
     bool handleSecondaryKeyEvent(const KeyEvent& event) override {
         if (itemCount == 0) return false;
+        if (!smoothMenu) return false;
         if (event.up) {
-            if (selectedIndex > 0) {
-                selectedIndex--;
-                if (selectedIndex < scrollOffset) {
-                    setScrollOffsetAnimated(selectedIndex);
-                }
-                invalidate();
-            }
+            smoothMenu->goLast();
+            selectedIndex = smoothMenu->getSelectedOptionIndex();
+            invalidate();
             return true;
         }
         if (event.down) {
-            if (selectedIndex < itemCount - 1) {
-                selectedIndex++;
-                if (selectedIndex >= scrollOffset + visibleItems) {
-                    setScrollOffsetAnimated(selectedIndex - visibleItems + 1);
-                }
-                invalidate();
-            }
+            smoothMenu->goNext();
+            selectedIndex = smoothMenu->getSelectedOptionIndex();
+            invalidate();
             return true;
         }
         if (event.enter) {
