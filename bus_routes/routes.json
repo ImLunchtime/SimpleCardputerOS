@@ -7,6 +7,10 @@
     "wc_nextstop.mp3",
     "$下一站"
   ],
+  "arrival_audio_template": [
+    "$站点",
+    "wc_arrived.mp3"
+  ],
   "tips_buttons": [
     { "label": "Friendly Tip 1", "audio": "tips1.mp3" }
   ],

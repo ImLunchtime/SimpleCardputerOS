@@ -41,6 +41,7 @@ private:
     AudioOutputM5Speaker *audioOut;
     std::vector<String> audioPlaylist;
     std::vector<String> audioTemplate;
+    std::vector<String> arrivalAudioTemplate;
     String currentLineAudio;
     int volumePercent;
 
@@ -219,6 +220,12 @@ public:
             audioTemplate.push_back(v.as<String>());
         }
 
+        arrivalAudioTemplate.clear();
+        JsonArray arrivalTemplateArray = doc["arrival_audio_template"];
+        for (JsonVariant v : arrivalTemplateArray) {
+            arrivalAudioTemplate.push_back(v.as<String>());
+        }
+
         JsonArray routesArray = doc["routes"];
         routes.clear();
         routeMenu->clear();
@@ -388,10 +395,28 @@ public:
             }
             playNextInQueue();
         } else {
-            // Arrival
-            if (currentStationIndex < stations.size()) {
+            if (currentStationIndex >= stations.size()) return;
+
+            if (arrivalAudioTemplate.empty()) {
                 playAudio(stations[currentStationIndex].audio);
+                return;
             }
+
+            for (const String& item : arrivalAudioTemplate) {
+                if (item == "$站点") {
+                    audioPlaylist.push_back(stations[currentStationIndex].audio);
+                } else if (item == "$线路") {
+                    if (currentLineAudio.length() > 0) audioPlaylist.push_back(currentLineAudio);
+                } else if (item == "$本线路终点站") {
+                    if (!stations.empty()) audioPlaylist.push_back(stations.back().audio);
+                } else if (item == "$下一站") {
+                    int nextIndex = currentStationIndex + 1;
+                    if (nextIndex < stations.size()) audioPlaylist.push_back(stations[nextIndex].audio);
+                } else {
+                    audioPlaylist.push_back(item);
+                }
+            }
+            playNextInQueue();
         }
     }
 
