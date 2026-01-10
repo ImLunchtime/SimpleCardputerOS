@@ -61,7 +61,7 @@ inline void MusicApp::scanMusicTaskFunction(void* parameter) {
     
     if (ok) {
         app->musicFileCount = count;
-        if (app->musicFileCount > 0) {
+        if (!app->exitRequested && app->musicFileCount > 0) {
             app->categorizeMusic();
         }
     } else {

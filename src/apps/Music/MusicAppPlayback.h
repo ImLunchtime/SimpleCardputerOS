@@ -147,6 +147,7 @@ inline void MusicApp::processAudioCommands() {
     if (!audioFile) {
         updateAudioError("Failed to create AudioFileSourceSD");
         cleanupAudioTask();
+        audioTaskHandle = nullptr;
         vTaskDelete(nullptr);
         return;
     }
@@ -155,6 +156,7 @@ inline void MusicApp::processAudioCommands() {
     if (!audioOutput) {
         updateAudioError("Failed to create AudioOutputM5Speaker");
         cleanupAudioTask();
+        audioTaskHandle = nullptr;
         vTaskDelete(nullptr);
         return;
     }
@@ -163,6 +165,7 @@ inline void MusicApp::processAudioCommands() {
     if (!mp3Generator) {
         updateAudioError("Failed to create AudioGeneratorMP3");
         cleanupAudioTask();
+        audioTaskHandle = nullptr;
         vTaskDelete(nullptr);
         return;
     }
@@ -172,6 +175,7 @@ inline void MusicApp::processAudioCommands() {
     if (!audioOutput->begin()) {
         updateAudioError("Audio output init failed");
         cleanupAudioTask();
+        audioTaskHandle = nullptr;
         vTaskDelete(nullptr);
         return;
     }
@@ -215,6 +219,7 @@ inline void MusicApp::processAudioCommands() {
                 case AUDIO_CMD_SHUTDOWN:
                     stopAudioPlayback();
                     cleanupAudioTask();
+                    audioTaskHandle = nullptr;
                     vTaskDelete(nullptr);
                     return;
             }

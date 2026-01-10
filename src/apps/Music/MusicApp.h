@@ -101,6 +101,7 @@ private:
     EventSystem* eventSystem;
     AppManager* appManager;
     
+    volatile bool exitRequested;
     
     // 双核心音频系统组件
     TaskHandle_t audioTaskHandle;
@@ -270,6 +271,7 @@ private:
     void setVolume(int volume);
     void updateSongInfo();
     void cleanup();
+    void shutdownForExit();
     void drawInterface();
     void showListView();
     void showPlayerView();

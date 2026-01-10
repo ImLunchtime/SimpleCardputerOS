@@ -18,13 +18,20 @@ public:
         return 101;
     }
 
-    void ensureCreated(UIManager* uiManager) override {
-        if (window) {
+    void ensureCreated(UIManager* manager) override {
+        if (!manager) return;
+        UIWidget* existingWindow = manager->getWidget(REMOTE_WINDOW_ID);
+        if (existingWindow && existingWindow->getType() == WIDGET_WINDOW) {
+            window = static_cast<UIWindow*>(existingWindow);
+            UIWidget* existingImage = manager->getWidget(REMOTE_IMAGE_ID);
+            tipsImage = existingImage ? static_cast<UIImage*>(existingImage) : nullptr;
             return;
         }
-        window = uiManager->createWindow(REMOTE_WINDOW_ID, 30, 20, 144, 100, "ESP-NOW RoverRemote Remote", "RoverRemoteWindow");
-        tipsImage = uiManager->createImage(REMOTE_IMAGE_ID, 15, 42, 128, 60, remote_rover_keyboard_tips, remote_rover_keyboard_tips_size, "TipsImage", window);
-        uiManager->setWidgetTreeVisible(window, false);
+        window = nullptr;
+        tipsImage = nullptr;
+        window = manager->createWindow(REMOTE_WINDOW_ID, 30, 20, 144, 100, "ESP-NOW RoverRemote Remote", "RoverRemoteWindow");
+        tipsImage = manager->createImage(REMOTE_IMAGE_ID, 15, 42, 128, 60, remote_rover_keyboard_tips, remote_rover_keyboard_tips_size, "TipsImage", window);
+        manager->setWidgetTreeVisible(window, false);
     }
 
     UIWindow* getWindow() const override {
@@ -87,4 +94,3 @@ private:
     UIWindow* window;
     UIImage* tipsImage;
 };
-

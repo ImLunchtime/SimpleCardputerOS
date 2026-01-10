@@ -91,8 +91,29 @@ public:
     int getMenuItemId() const override { return 103; } // Unique ID
 
     void ensureCreated(UIManager* manager) override {
-        if (window) return;
+        if (!manager) return;
         uiManager = manager;
+        UIWidget* existingWindow = uiManager->getWidget(WINDOW_ID);
+        if (existingWindow && existingWindow->getType() == WIDGET_WINDOW) {
+            window = static_cast<UIWindow*>(existingWindow);
+            UIWidget* m = uiManager->getWidget(MENU_LIST_ID);
+            routeMenu = m ? static_cast<UIMenuList*>(m) : nullptr;
+            UIWidget* l1 = uiManager->getWidget(STATUS_LABEL_ID);
+            UIWidget* l2 = uiManager->getWidget(CURR_STATION_LABEL_ID);
+            UIWidget* l3 = uiManager->getWidget(NEXT_STATION_LABEL_ID);
+            UIWidget* l4 = uiManager->getWidget(GUIDE_LABEL_ID);
+            statusLabel = l1 ? static_cast<UILabel*>(l1) : nullptr;
+            currentStationLabel = l2 ? static_cast<UILabel*>(l2) : nullptr;
+            nextStationLabel = l3 ? static_cast<UILabel*>(l3) : nullptr;
+            guideLabel = l4 ? static_cast<UILabel*>(l4) : nullptr;
+            return;
+        }
+        window = nullptr;
+        routeMenu = nullptr;
+        statusLabel = nullptr;
+        currentStationLabel = nullptr;
+        nextStationLabel = nullptr;
+        guideLabel = nullptr;
         
         setupAudio();
         

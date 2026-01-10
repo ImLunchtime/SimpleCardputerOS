@@ -99,7 +99,7 @@ public:
         }
         toolMenu->setColors(TFT_GREEN, TFT_YELLOW, TFT_WHITE, TFT_DARKGREY);
 
-        uiManager->nextFocus();
+        uiManager->rebuildForegroundFocus();
     }
 
     void loop() override {
@@ -163,6 +163,7 @@ public:
         if (!toolWindow) return;
         uiManager->hidePage(menuWindow);
         uiManager->showPage(toolWindow);  
+        uiManager->rebuildForegroundFocus();
         if (appManager) {
             appManager->setGlobalEscEnabled(false);
         }
@@ -175,12 +176,16 @@ public:
     }
 
     void showMenuView() {
-        if (!menuWindow || !currentTool) return;
-        currentTool->ensureCreated(uiManager);
-        UIWindow* toolWindow = currentTool->getWindow();
-        if (!toolWindow) return;
-        uiManager->hidePage(toolWindow);
+        if (!menuWindow) return;
+        if (currentTool) {
+            currentTool->ensureCreated(uiManager);
+            UIWindow* toolWindow = currentTool->getWindow();
+            if (toolWindow) {
+                uiManager->hidePage(toolWindow);
+            }
+        }
         uiManager->showPage(menuWindow);
+        uiManager->rebuildForegroundFocus();
         uiManager->refresh();
     }
 

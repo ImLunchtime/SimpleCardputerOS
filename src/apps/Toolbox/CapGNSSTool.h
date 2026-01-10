@@ -26,10 +26,26 @@ public:
     }
 
     void ensureCreated(UIManager* manager) override {
-        if (window) {
+        if (!manager) return;
+        uiManager = manager;
+        UIWidget* existingWindow = uiManager->getWidget(WINDOW_ID);
+        if (existingWindow && existingWindow->getType() == WIDGET_WINDOW) {
+            window = static_cast<UIWindow*>(existingWindow);
+            UIWidget* w1 = uiManager->getWidget(STATUS_LABEL_ID);
+            UIWidget* w2 = uiManager->getWidget(SAT_INFO_LABEL_ID);
+            UIWidget* w3 = uiManager->getWidget(POSITION_LABEL_ID);
+            UIWidget* w4 = uiManager->getWidget(TIME_LABEL_ID);
+            statusLabel = w1 ? static_cast<UILabel*>(w1) : nullptr;
+            satInfoLabel = w2 ? static_cast<UILabel*>(w2) : nullptr;
+            positionLabel = w3 ? static_cast<UILabel*>(w3) : nullptr;
+            timeLabel = w4 ? static_cast<UILabel*>(w4) : nullptr;
             return;
         }
-        uiManager = manager;
+        window = nullptr;
+        statusLabel = nullptr;
+        satInfoLabel = nullptr;
+        positionLabel = nullptr;
+        timeLabel = nullptr;
         window = uiManager->createWindow(WINDOW_ID, 20, 20, 200, 100, "Cap GNSS", "CapGNSSWindow");
         statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 8, 25, "GNSS: initializing...", "CapGNSSStatus", window);
         satInfoLabel = uiManager->createLabel(SAT_INFO_LABEL_ID, 8, 40, "Sat: -- Mode: --", "CapGNSSSatInfo", window);

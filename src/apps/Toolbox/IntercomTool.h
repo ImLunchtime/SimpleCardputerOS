@@ -19,13 +19,21 @@ public:
         return 104;
     }
 
-    void ensureCreated(UIManager* uiManager) override {
-        if (window) {
+    void ensureCreated(UIManager* manager) override {
+        if (!manager) return;
+        uiManager = manager;
+        UIWidget* existingWindow = manager->getWidget(WINDOW_ID);
+        if (existingWindow && existingWindow->getType() == WIDGET_WINDOW) {
+            window = static_cast<UIWindow*>(existingWindow);
+            UIWidget* existingImage = manager->getWidget(IMAGE_ID);
+            image = existingImage ? static_cast<UIImage*>(existingImage) : nullptr;
             return;
         }
-        window = uiManager->createWindow(WINDOW_ID, 30, 20, 154, 108, "Intercom", "IntercomWindow");
-        image = uiManager->createImage(IMAGE_ID, 11, 11, 144, 98, panel_intercom, panel_intercom_size, "IntercomImage", window);
-        uiManager->setWidgetTreeVisible(window, false);
+        window = nullptr;
+        image = nullptr;
+        window = manager->createWindow(WINDOW_ID, 30, 20, 154, 108, "Intercom", "IntercomWindow");
+        image = manager->createImage(IMAGE_ID, 11, 11, 144, 98, panel_intercom, panel_intercom_size, "IntercomImage", window);
+        manager->setWidgetTreeVisible(window, false);
     }
 
     UIWindow* getWindow() const override {

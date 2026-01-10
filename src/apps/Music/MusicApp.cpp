@@ -11,6 +11,7 @@ MusicApp::MusicApp(EventSystem* events, AppManager* manager)
       audioTaskHandle(nullptr), audioCommandQueue(nullptr), audioStatusMutex(nullptr),
       scanTaskHandle(nullptr), scanInProgress(false), scanCompleted(false), scanFailed(false), menuBuilt(false) {
     uiManager = appManager->getUIManager();
+    exitRequested = false;
     
     memset(&audioStatus, 0, sizeof(audioStatus));
     audioStatus.currentVolume = currentVolume;
@@ -74,6 +75,14 @@ MusicApp::~MusicApp() {
 }
 
 void MusicApp::setup() {
+    if (scanTaskHandle) {
+        exitRequested = true;
+        uint32_t startMs = millis();
+        while (scanTaskHandle && (millis() - startMs < 3000)) {
+            vTaskDelay(pdMS_TO_TICKS(10));
+        }
+    }
+    exitRequested = false;
     auto spk_cfg = M5Cardputer.Speaker.config();
     spk_cfg.sample_rate = 128000;
     spk_cfg.task_pinned_core = APP_CPU_NUM;
@@ -178,27 +187,7 @@ void MusicApp::onKeyEvent(const KeyEvent& event) {
         if (viewMode == VIEW_PLAYER) {
             showListView();
         } else {
-            if (audioTaskHandle) {
-                sendAudioCommand(AUDIO_CMD_SHUTDOWN);
-                vTaskDelay(pdMS_TO_TICKS(100));
-                vTaskDelete(audioTaskHandle);
-                audioTaskHandle = nullptr;
-            }
-            if (audioCommandQueue) {
-                vQueueDelete(audioCommandQueue);
-                audioCommandQueue = nullptr;
-            }
-            if (audioStatusMutex) {
-                vSemaphoreDelete(audioStatusMutex);
-                audioStatusMutex = nullptr;
-            }
-            if (scanTaskHandle) {
-                vTaskDelete(scanTaskHandle);
-                scanTaskHandle = nullptr;
-                scanInProgress = false;
-            }
-            clearMusicData();
-            cleanup();
+            shutdownForExit();
             if (appManager) {
                 appManager->returnToLauncher();
             }
@@ -264,4 +253,49 @@ void MusicApp::showPlayerView() {
         uiManager->showPage(playerWindow);
     }
     uiManager->refresh();
+}
+
+void MusicApp::shutdownForExit() {
+    exitRequested = true;
+
+    if (audioCommandQueue) {
+        AudioTaskCommand command;
+        command.cmd = AUDIO_CMD_SHUTDOWN;
+        command.param = 0;
+        command.filePath[0] = '\0';
+        xQueueSend(audioCommandQueue, &command, pdMS_TO_TICKS(200));
+    }
+
+    uint32_t startMs = millis();
+    while (audioTaskHandle && (millis() - startMs < 800)) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    if (audioTaskHandle) {
+        vTaskDelete(audioTaskHandle);
+        audioTaskHandle = nullptr;
+    }
+
+    if (audioCommandQueue) {
+        vQueueDelete(audioCommandQueue);
+        audioCommandQueue = nullptr;
+    }
+    if (audioStatusMutex) {
+        vSemaphoreDelete(audioStatusMutex);
+        audioStatusMutex = nullptr;
+    }
+
+    clearMusicData();
+    cleanup();
+    mainWindow = nullptr;
+    playerWindow = nullptr;
+    titleLabel = nullptr;
+    songLabel = nullptr;
+    playerSongLabel = nullptr;
+    playList = nullptr;
+    lyricsCurrentLabel = nullptr;
+    lyricsNextLabel = nullptr;
+    volumeSlider = nullptr;
+    menuBuilt = false;
+    scanCompleted = false;
+    scanFailed = false;
 }
