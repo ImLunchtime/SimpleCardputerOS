@@ -16,7 +16,7 @@
 #define SD_SPI_MOSI_PIN 14
 #define SD_SPI_CS_PIN   12
 
-class BusSimulatorTool : public ITool {
+class BusSimulatorTool : public ToolBase {
 private:
     struct Station {
         String id;
@@ -45,14 +45,11 @@ private:
     String currentLineAudio;
     int volumePercent;
 
-    UIWindow* window;
     UIMenuList* routeMenu;
     UILabel* statusLabel;
     UILabel* currentStationLabel;
     UILabel* nextStationLabel;
     UILabel* guideLabel;
-    
-    UIManager* uiManager;
     
     std::vector<RouteInfo> routes;
     std::vector<Station> stations;
@@ -79,9 +76,9 @@ private:
 
 public:
     BusSimulatorTool() 
-        : window(nullptr), routeMenu(nullptr), statusLabel(nullptr),
+        : routeMenu(nullptr), statusLabel(nullptr),
           currentStationLabel(nullptr), nextStationLabel(nullptr), guideLabel(nullptr),
-          uiManager(nullptr), currentStationIndex(0), state(SELECTING_ROUTE),
+          currentStationIndex(0), state(SELECTING_ROUTE),
           mp3(nullptr), audioFile(nullptr), audioOut(nullptr), volumePercent(10) {}
           
     ~BusSimulatorTool() {
@@ -91,53 +88,57 @@ public:
     const char* getMenuText() const override { return "Bus Simulator"; }
     int getMenuItemId() const override { return 103; } // Unique ID
 
-    void ensureCreated(UIManager* manager) override {
-        if (!manager) return;
-        uiManager = manager;
-        UIWidget* existingWindow = uiManager->getWidget(WINDOW_ID);
-        if (existingWindow && existingWindow->getType() == WIDGET_WINDOW) {
-            window = static_cast<UIWindow*>(existingWindow);
-            UIWidget* m = uiManager->getWidget(MENU_LIST_ID);
-            routeMenu = m ? static_cast<UIMenuList*>(m) : nullptr;
-            UIWidget* l1 = uiManager->getWidget(STATUS_LABEL_ID);
-            UIWidget* l2 = uiManager->getWidget(CURR_STATION_LABEL_ID);
-            UIWidget* l3 = uiManager->getWidget(NEXT_STATION_LABEL_ID);
-            UIWidget* l4 = uiManager->getWidget(GUIDE_LABEL_ID);
-            statusLabel = l1 ? static_cast<UILabel*>(l1) : nullptr;
-            currentStationLabel = l2 ? static_cast<UILabel*>(l2) : nullptr;
-            nextStationLabel = l3 ? static_cast<UILabel*>(l3) : nullptr;
-            guideLabel = l4 ? static_cast<UILabel*>(l4) : nullptr;
-            return;
-        }
+    const char* getEnterTipLine1() const override { return "Loading route data"; }
+    const char* getEnterTipLine2() const override { return "Please wait..."; }
+
+    void onExit(const ToolServices& services) override {
+        (void)services;
+        stopAudio();
+    }
+
+private:
+    int getWindowWidgetId() const override { return WINDOW_ID; }
+
+    void resetPointers() override {
         window = nullptr;
         routeMenu = nullptr;
         statusLabel = nullptr;
         currentStationLabel = nullptr;
         nextStationLabel = nullptr;
         guideLabel = nullptr;
-        
-        setupAudio();
-        
-        window = uiManager->createWindow(WINDOW_ID, 30, 20, 180, 100, "Bus Simulator", "BusSimWindow");
-        
-        // Route Menu
-        routeMenu = new RouteMenuCallback(MENU_LIST_ID, 15, 35, 150, 50, "RouteList", this);
-        routeMenu->setParent(window);
-        uiManager->addWidget(routeMenu);
-        
-        // Station View Labels (Hidden initially)
-        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 15, 30, "Stopped", "BusStatus", window);
-        currentStationLabel = uiManager->createLabel(CURR_STATION_LABEL_ID, 15, 50, "Curr: --", "BusCurrStation", window);
-        nextStationLabel = uiManager->createLabel(NEXT_STATION_LABEL_ID, 15, 65, "Next: --", "BusNextStation", window);
-        guideLabel = uiManager->createLabel(GUIDE_LABEL_ID, 15, 85, "Select Route", "BusGuide", window);
-
-        loadRoutes();
-        updateUIState();
-        
-        uiManager->setWidgetTreeVisible(window, false);
     }
 
-    UIWindow* getWindow() const override { return window; }
+    void bindWidgets(UIManager* manager) override {
+        UIWidget* existingWindow = manager->getWidget(WINDOW_ID);
+        window = existingWindow ? static_cast<UIWindow*>(existingWindow) : nullptr;
+        UIWidget* m = manager->getWidget(MENU_LIST_ID);
+        routeMenu = m ? static_cast<UIMenuList*>(m) : nullptr;
+        UIWidget* l1 = manager->getWidget(STATUS_LABEL_ID);
+        UIWidget* l2 = manager->getWidget(CURR_STATION_LABEL_ID);
+        UIWidget* l3 = manager->getWidget(NEXT_STATION_LABEL_ID);
+        UIWidget* l4 = manager->getWidget(GUIDE_LABEL_ID);
+        statusLabel = l1 ? static_cast<UILabel*>(l1) : nullptr;
+        currentStationLabel = l2 ? static_cast<UILabel*>(l2) : nullptr;
+        nextStationLabel = l3 ? static_cast<UILabel*>(l3) : nullptr;
+        guideLabel = l4 ? static_cast<UILabel*>(l4) : nullptr;
+    }
+
+    void createWidgets(UIManager* manager) override {
+        uiManager = manager;
+        setupAudio();
+        window = manager->createWindow(WINDOW_ID, 30, 20, 180, 100, "Bus Simulator", "BusSimWindow");
+        routeMenu = new RouteMenuCallback(MENU_LIST_ID, 15, 35, 150, 50, "RouteList", this);
+        routeMenu->setParent(window);
+        manager->addWidget(routeMenu);
+        statusLabel = manager->createLabel(STATUS_LABEL_ID, 15, 30, "Stopped", "BusStatus", window);
+        currentStationLabel = manager->createLabel(CURR_STATION_LABEL_ID, 15, 50, "Curr: --", "BusCurrStation", window);
+        nextStationLabel = manager->createLabel(NEXT_STATION_LABEL_ID, 15, 65, "Next: --", "BusNextStation", window);
+        guideLabel = manager->createLabel(GUIDE_LABEL_ID, 15, 85, "Select Route", "BusGuide", window);
+        loadRoutes();
+        updateUIState();
+    }
+
+public:
 
     void setupAudio() {
         if (!audioOut) {
@@ -420,7 +421,8 @@ public:
         }
     }
 
-    void handleKeyEvent(const KeyEvent& event, void (*sendCommand)(const char* cmd, void* ctx), void* ctx) override {
+    void handleKeyEvent(const KeyEvent& event, const ToolServices& services) override {
+        (void)services;
         if (state == SELECTING_ROUTE) {
              if (routeMenu) {
                  routeMenu->handleSecondaryKeyEvent(event);
@@ -464,7 +466,8 @@ public:
         }
     }
     
-    void update() override {
+    void update(const ToolServices& services) override {
+        (void)services;
         if (mp3 && mp3->isRunning()) {
             if (!mp3->loop()) {
                 mp3->stop();

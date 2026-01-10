@@ -3,13 +3,8 @@
 #include "ITool.h"
 #include "assets/remote_rover_keyboard_tips.h"
 
-class RoverRemoteTool : public ITool {
+class RoverRemoteTool : public ImagePanelTool {
 public:
-    RoverRemoteTool()
-        : window(nullptr),
-          tipsImage(nullptr) {
-    }
-
     const char* getMenuText() const override {
         return "ESP-NOW Rover Remote";
     }
@@ -18,28 +13,24 @@ public:
         return 101;
     }
 
-    void ensureCreated(UIManager* manager) override {
-        if (!manager) return;
-        UIWidget* existingWindow = manager->getWidget(REMOTE_WINDOW_ID);
-        if (existingWindow && existingWindow->getType() == WIDGET_WINDOW) {
-            window = static_cast<UIWindow*>(existingWindow);
-            UIWidget* existingImage = manager->getWidget(REMOTE_IMAGE_ID);
-            tipsImage = existingImage ? static_cast<UIImage*>(existingImage) : nullptr;
-            return;
-        }
-        window = nullptr;
-        tipsImage = nullptr;
-        window = manager->createWindow(REMOTE_WINDOW_ID, 30, 20, 144, 100, "ESP-NOW RoverRemote Remote", "RoverRemoteWindow");
-        tipsImage = manager->createImage(REMOTE_IMAGE_ID, 15, 42, 128, 60, remote_rover_keyboard_tips, remote_rover_keyboard_tips_size, "TipsImage", window);
-        manager->setWidgetTreeVisible(window, false);
+    bool usesEspNow() const override {
+        return true;
     }
 
-    UIWindow* getWindow() const override {
-        return window;
+    const char* getEnterCommand() const override {
+        return "C_ST";
     }
 
-    void handleKeyEvent(const KeyEvent& event, void (*sendCommand)(const char* cmd, void* ctx), void* ctx) override {
-        if (!sendCommand) {
+    const char* getEnterTipLine1() const override {
+        return "Starting ESP-NOW";
+    }
+
+    const char* getEnterTipLine2() const override {
+        return "Please wait...";
+    }
+
+    void handleKeyEvent(const KeyEvent& event, const ToolServices& services) override {
+        if (!services.sendCommand) {
             return;
         }
         if (!event.text.isEmpty()) {
@@ -48,27 +39,27 @@ public:
                 key = static_cast<char>(key - 'a' + 'A');
             }
             if (key == 'E') {
-                sendCommand("C_FD", ctx);
+                services.send("C_FD");
                 return;
             }
             if (key == 'A') {
-                sendCommand("C_LS", ctx);
+                services.send("C_LS");
                 return;
             }
             if (key == 'S') {
-                sendCommand("C_BK", ctx);
+                services.send("C_BK");
                 return;
             }
             if (key == 'D') {
-                sendCommand("C_RS", ctx);
+                services.send("C_RS");
                 return;
             }
             if (key == 'K') {
-                sendCommand("C_TL", ctx);
+                services.send("C_TL");
                 return;
             }
             if (key == 'L') {
-                sendCommand("C_TR", ctx);
+                services.send("C_TR");
                 return;
             }
         }
@@ -81,7 +72,7 @@ public:
             !event.left &&
             !event.right &&
             !event.esc) {
-            sendCommand("C_ST", ctx);
+            services.send("C_ST");
         }
     }
 
@@ -91,6 +82,17 @@ private:
         REMOTE_IMAGE_ID = 12
     };
 
-    UIWindow* window;
-    UIImage* tipsImage;
+    int getWindowWidgetId() const override { return REMOTE_WINDOW_ID; }
+    int getImageWidgetId() const override { return REMOTE_IMAGE_ID; }
+    int getWindowW() const override { return 144; }
+    int getWindowH() const override { return 100; }
+    const char* getWindowTitle() const override { return "ESP-NOW Rover Remote"; }
+    const char* getWindowName() const override { return "RoverRemoteWindow"; }
+    int getImageX() const override { return 15; }
+    int getImageY() const override { return 42; }
+    int getImageW() const override { return 128; }
+    int getImageH() const override { return 60; }
+    const uint8_t* getImageData() const override { return remote_rover_keyboard_tips; }
+    size_t getImageDataSize() const override { return remote_rover_keyboard_tips_size; }
+    const char* getImageName() const override { return "TipsImage"; }
 };

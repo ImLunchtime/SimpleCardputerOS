@@ -4,15 +4,13 @@
 #include <M5Cardputer.h>
 #include "MultipleSatellite.h"
 
-class CapGNSSTool : public ITool {
+class CapGNSSTool : public ToolBase {
 public:
     CapGNSSTool()
-        : window(nullptr),
-          statusLabel(nullptr),
+        : statusLabel(nullptr),
           satInfoLabel(nullptr),
           positionLabel(nullptr),
           timeLabel(nullptr),
-          uiManager(nullptr),
           lastUpdateMs(0),
           hasFix(false) {
     }
@@ -25,46 +23,21 @@ public:
         return 102;
     }
 
-    void ensureCreated(UIManager* manager) override {
-        if (!manager) return;
-        uiManager = manager;
-        UIWidget* existingWindow = uiManager->getWidget(WINDOW_ID);
-        if (existingWindow && existingWindow->getType() == WIDGET_WINDOW) {
-            window = static_cast<UIWindow*>(existingWindow);
-            UIWidget* w1 = uiManager->getWidget(STATUS_LABEL_ID);
-            UIWidget* w2 = uiManager->getWidget(SAT_INFO_LABEL_ID);
-            UIWidget* w3 = uiManager->getWidget(POSITION_LABEL_ID);
-            UIWidget* w4 = uiManager->getWidget(TIME_LABEL_ID);
-            statusLabel = w1 ? static_cast<UILabel*>(w1) : nullptr;
-            satInfoLabel = w2 ? static_cast<UILabel*>(w2) : nullptr;
-            positionLabel = w3 ? static_cast<UILabel*>(w3) : nullptr;
-            timeLabel = w4 ? static_cast<UILabel*>(w4) : nullptr;
-            return;
-        }
-        window = nullptr;
-        statusLabel = nullptr;
-        satInfoLabel = nullptr;
-        positionLabel = nullptr;
-        timeLabel = nullptr;
-        window = uiManager->createWindow(WINDOW_ID, 20, 20, 200, 100, "Cap GNSS", "CapGNSSWindow");
-        statusLabel = uiManager->createLabel(STATUS_LABEL_ID, 8, 25, "GNSS: initializing...", "CapGNSSStatus", window);
-        satInfoLabel = uiManager->createLabel(SAT_INFO_LABEL_ID, 8, 40, "Sat: -- Mode: --", "CapGNSSSatInfo", window);
-        positionLabel = uiManager->createLabel(POSITION_LABEL_ID, 8, 55, "Lat: ---.------  Lon: ---.------", "CapGNSSPos", window);
-        timeLabel = uiManager->createLabel(TIME_LABEL_ID, 8, 70, "Time: --:--:--", "CapGNSSTime", window);
-        uiManager->setWidgetTreeVisible(window, false);
+    const char* getEnterTipLine1() const override {
+        return "Starting GNSS";
     }
 
-    UIWindow* getWindow() const override {
-        return window;
+    const char* getEnterTipLine2() const override {
+        return "Please wait...";
     }
 
-    void handleKeyEvent(const KeyEvent& event, void (*sendCommand)(const char* cmd, void* ctx), void* ctx) override {
+    void handleKeyEvent(const KeyEvent& event, const ToolServices& services) override {
         (void)event;
-        (void)sendCommand;
-        (void)ctx;
+        (void)services;
     }
 
-    void update() override {
+    void update(const ToolServices& services) override {
+        (void)services;
         if (!uiManager || !window || !window->isVisible()) {
             return;
         }
@@ -124,12 +97,10 @@ private:
         TIME_LABEL_ID = 24
     };
 
-    UIWindow* window;
     UILabel* statusLabel;
     UILabel* satInfoLabel;
     UILabel* positionLabel;
     UILabel* timeLabel;
-    UIManager* uiManager;
     unsigned long lastUpdateMs;
     bool hasFix;
 
@@ -137,6 +108,39 @@ private:
     inline static bool gnssInitialized;
     inline static bool gnssConfigured;
     inline static bool serialInitialized;
+
+    int getWindowWidgetId() const override {
+        return WINDOW_ID;
+    }
+
+    void resetPointers() override {
+        window = nullptr;
+        statusLabel = nullptr;
+        satInfoLabel = nullptr;
+        positionLabel = nullptr;
+        timeLabel = nullptr;
+    }
+
+    void bindWidgets(UIManager* manager) override {
+        UIWidget* existingWindow = manager->getWidget(WINDOW_ID);
+        window = existingWindow ? static_cast<UIWindow*>(existingWindow) : nullptr;
+        UIWidget* w1 = manager->getWidget(STATUS_LABEL_ID);
+        UIWidget* w2 = manager->getWidget(SAT_INFO_LABEL_ID);
+        UIWidget* w3 = manager->getWidget(POSITION_LABEL_ID);
+        UIWidget* w4 = manager->getWidget(TIME_LABEL_ID);
+        statusLabel = w1 ? static_cast<UILabel*>(w1) : nullptr;
+        satInfoLabel = w2 ? static_cast<UILabel*>(w2) : nullptr;
+        positionLabel = w3 ? static_cast<UILabel*>(w3) : nullptr;
+        timeLabel = w4 ? static_cast<UILabel*>(w4) : nullptr;
+    }
+
+    void createWidgets(UIManager* manager) override {
+        window = manager->createWindow(WINDOW_ID, 20, 20, 200, 100, "Cap GNSS", "CapGNSSWindow");
+        statusLabel = manager->createLabel(STATUS_LABEL_ID, 8, 25, "GNSS: initializing...", "CapGNSSStatus", window);
+        satInfoLabel = manager->createLabel(SAT_INFO_LABEL_ID, 8, 40, "Sat: -- Mode: --", "CapGNSSSatInfo", window);
+        positionLabel = manager->createLabel(POSITION_LABEL_ID, 8, 55, "Lat: ---.------  Lon: ---.------", "CapGNSSPos", window);
+        timeLabel = manager->createLabel(TIME_LABEL_ID, 8, 70, "Time: --:--:--", "CapGNSSTime", window);
+    }
 
     void initGnss() {
         if (!serialInitialized) {

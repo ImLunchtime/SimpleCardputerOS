@@ -103,37 +103,20 @@ public:
     }
 
     void loop() override {
-        if (currentTool) {
-            currentTool->ensureCreated(uiManager);
-            UIWindow* toolWindow = currentTool->getWindow();
-            if (toolWindow && toolWindow->isVisible()) {
-                currentTool->update();
-            }
-        }
+        if (!isInToolView()) return;
+        ToolServices services = buildToolServices();
+        currentTool->ensureCreated(uiManager);
+        currentTool->update(services);
     }
 
     void onKeyEvent(const KeyEvent& event) override {
-        if (event.esc) {
-            if (currentTool) {
-                currentTool->ensureCreated(uiManager);
-                UIWindow* toolWindow = currentTool->getWindow();
-                if (toolWindow && toolWindow->isVisible()) {
-                    deinitEspNow();
-                    showMenuView();
-                    if (appManager) {
-                        appManager->setGlobalEscEnabled(true);
-                    }
-                    return;
-                }
-            }
+        if (event.esc && isInToolView()) {
+            exitToolView();
+            return;
         }
-        if (currentTool) {
-            currentTool->ensureCreated(uiManager);
-            UIWindow* toolWindow = currentTool->getWindow();
-            if (toolWindow && toolWindow->isVisible()) {
-                handleToolKeyEvent(event);
-                return;
-            }
+        if (isInToolView()) {
+            handleToolKeyEvent(event);
+            return;
         }
         if (uiManager->handleKeyEvent(event)) {
             uiManager->refreshAppArea();
@@ -161,6 +144,12 @@ public:
         currentTool->ensureCreated(uiManager);
         UIWindow* toolWindow = currentTool->getWindow();
         if (!toolWindow) return;
+        ToolServices services = buildToolServices();
+        if (currentTool->usesEspNow()) {
+            initEspNow();
+        } else {
+            deinitEspNow();
+        }
         uiManager->hidePage(menuWindow);
         uiManager->showPage(toolWindow);  
         uiManager->rebuildForegroundFocus();
@@ -168,11 +157,17 @@ public:
             appManager->setGlobalEscEnabled(false);
         }
         uiManager->refresh();
-        TipManager* tip = appManager ? appManager->getTipManager() : nullptr;
-        if (tip) {
-            tip->showTwoLabel("Initializing device", "Please wait...", 800, false);
+        TipManager* tip = services.tipManager;
+        const char* tip1 = currentTool->getEnterTipLine1();
+        const char* tip2 = currentTool->getEnterTipLine2();
+        if (tip && tip1) {
+            tip->showTwoLabel(tip1, tip2 ? tip2 : "", 800, false);
         }
-        sendEspNowCommand("C_ST");
+        currentTool->onEnter(services);
+        const char* cmd = currentTool->getEnterCommand();
+        if (cmd && currentTool->usesEspNow()) {
+            services.send(cmd);
+        }
     }
 
     void showMenuView() {
@@ -190,6 +185,36 @@ public:
     }
 
 private:
+    ToolServices buildToolServices() {
+        ToolServices s{};
+        s.uiManager = uiManager;
+        s.appManager = appManager;
+        s.tipManager = appManager ? appManager->getTipManager() : nullptr;
+        s.sendCommand = &ToolboxApp::sendEspNowCommandStatic;
+        s.sendCommandCtx = this;
+        return s;
+    }
+
+    bool isInToolView() {
+        if (!currentTool) return false;
+        currentTool->ensureCreated(uiManager);
+        UIWindow* toolWindow = currentTool->getWindow();
+        return toolWindow && toolWindow->isVisible();
+    }
+
+    void exitToolView() {
+        if (!currentTool) return;
+        ToolServices services = buildToolServices();
+        currentTool->onExit(services);
+        if (currentTool->usesEspNow()) {
+            deinitEspNow();
+        }
+        showMenuView();
+        if (appManager) {
+            appManager->setGlobalEscEnabled(true);
+        }
+    }
+
     static void sendEspNowCommandStatic(const char* cmd, void* ctx) {
         if (!ctx) return;
         ToolboxApp* app = static_cast<ToolboxApp*>(ctx);
@@ -239,6 +264,7 @@ private:
         if (!currentTool) {
             return;
         }
-        currentTool->handleKeyEvent(event, &ToolboxApp::sendEspNowCommandStatic, this);
+        ToolServices services = buildToolServices();
+        currentTool->handleKeyEvent(event, services);
     }
 };
