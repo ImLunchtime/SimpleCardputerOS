@@ -2,10 +2,11 @@
   "route_name": "1号线",
   "line_audio": "line_line1.mp3",
   "stations": [
-    { "id": "s1", "name": "橘北新区", "audio": "station_jubei.mp3" },
-    { "id": "s2", "name": "橘京东", "audio": "station_orgeast.mp3" },
-    { "id": "s3", "name": "外滩", "audio": "station_waitan.mp3" },
-    { "id": "s4", "name": "洪桥", "audio": "station_hongqiao.mp3" },
-    { "id": "s5", "name": "涉谷", "audio": "station_shegu.mp3" }
+    { "id": "s1", "name": "鸟林南", "audio": "station_nlsouth.mp3" },
+    { "id": "s2", "name": "黄金海岸", "audio": "station_gdcoast.mp3" },
+    { "id": "s3", "name": "市中心", "audio": "station_center.mp3" },
+    { "id": "s4", "name": "远南岛", "audio": "station_fsisland.mp3" },
+    { "id": "s5", "name": "航天基地", "audio": "station_spacebase.mp3" },
+    { "id": "s6", "name": "兰溪公园", "audio": "station_lanxi.mp3" }
   ]
 }

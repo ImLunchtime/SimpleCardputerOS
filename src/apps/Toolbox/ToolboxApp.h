@@ -89,8 +89,9 @@ public:
         for (int i = 0; i < kToolCount; i++) {
             ITool* tool = tools[i];
             if (tool) {
+                tool->setManagers(uiManager, appManager);
+                tool->setup();
                 toolMenu->addItem(tool->getMenuText(), tool->getMenuItemId());
-                tool->ensureCreated(uiManager);
                 UIWindow* window = tool->getWindow();
                 if (window) {
                     uiManager->setWidgetTreeVisible(window, false);
@@ -105,8 +106,7 @@ public:
     void loop() override {
         if (!isInToolView()) return;
         ToolServices services = buildToolServices();
-        currentTool->ensureCreated(uiManager);
-        currentTool->update(services);
+        currentTool->loop(services);
     }
 
     void onKeyEvent(const KeyEvent& event) override {
@@ -141,7 +141,6 @@ public:
 
     void showToolView() {
         if (!menuWindow || !currentTool) return;
-        currentTool->ensureCreated(uiManager);
         UIWindow* toolWindow = currentTool->getWindow();
         if (!toolWindow) return;
         ToolServices services = buildToolServices();
@@ -173,7 +172,6 @@ public:
     void showMenuView() {
         if (!menuWindow) return;
         if (currentTool) {
-            currentTool->ensureCreated(uiManager);
             UIWindow* toolWindow = currentTool->getWindow();
             if (toolWindow) {
                 uiManager->hidePage(toolWindow);
@@ -197,7 +195,6 @@ private:
 
     bool isInToolView() {
         if (!currentTool) return false;
-        currentTool->ensureCreated(uiManager);
         UIWindow* toolWindow = currentTool->getWindow();
         return toolWindow && toolWindow->isVisible();
     }
@@ -265,6 +262,6 @@ private:
             return;
         }
         ToolServices services = buildToolServices();
-        currentTool->handleKeyEvent(event, services);
+        currentTool->onKeyEvent(event, services);
     }
 };

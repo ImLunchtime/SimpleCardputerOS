@@ -26,6 +26,11 @@ public:
     virtual const char* getMenuText() const = 0;
     virtual int getMenuItemId() const = 0;
 
+    virtual void setManagers(UIManager* uiManager, AppManager* appManager) = 0;
+    virtual void setup() = 0;
+    virtual void loop(const ToolServices& services) = 0;
+    virtual void onKeyEvent(const KeyEvent& event, const ToolServices& services) = 0;
+
     virtual void ensureCreated(UIManager* uiManager) = 0;
     virtual UIWindow* getWindow() const = 0;
 
@@ -37,12 +42,30 @@ public:
     virtual void onEnter(const ToolServices& services) { (void)services; }
     virtual void onExit(const ToolServices& services) { (void)services; }
 
-    virtual void handleKeyEvent(const KeyEvent& event, const ToolServices& services) = 0;
+    virtual void handleKeyEvent(const KeyEvent& event, const ToolServices& services) { (void)event; (void)services; }
     virtual void update(const ToolServices& services) { (void)services; }
 };
 
 class ToolBase : public ITool {
 public:
+    void setManagers(UIManager* manager, AppManager* managerApp) override {
+        uiManager = manager;
+        appManager = managerApp;
+    }
+
+    void setup() override {
+        if (!uiManager) return;
+        ensureCreated(uiManager);
+    }
+
+    void loop(const ToolServices& services) override {
+        update(services);
+    }
+
+    void onKeyEvent(const KeyEvent& event, const ToolServices& services) override {
+        handleKeyEvent(event, services);
+    }
+
     void ensureCreated(UIManager* manager) final {
         if (!manager) return;
         uiManager = manager;
@@ -66,6 +89,7 @@ public:
 protected:
     UIWindow* window = nullptr;
     UIManager* uiManager = nullptr;
+    AppManager* appManager = nullptr;
 
     virtual int getWindowWidgetId() const = 0;
     virtual void resetPointers() = 0;

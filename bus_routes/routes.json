@@ -5,7 +5,8 @@
     "wc_boundfor.mp3",
     "$本线路终点站",
     "wc_nextstop.mp3",
-    "$下一站"
+    "$下一站",
+    "tips1.mp3"
   ],
   "arrival_audio_template": [
     "$站点",
