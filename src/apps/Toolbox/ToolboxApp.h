@@ -9,6 +9,7 @@
 #include "CapGNSSTool.h"
 #include "BusSimulatorTool.h"
 #include "IntercomTool.h"
+#include "ImageViewerTool.h"
 #include <WiFi.h>
 #include <esp_now.h>
 #include <esp_wifi.h>
@@ -29,12 +30,13 @@ private:
     UIWindow* menuWindow;
 
     ITool* currentTool;
-    static const int kToolCount = 4;
+    static const int kToolCount = 5;
     ITool* tools[kToolCount];
     RoverRemoteTool roverRemoteTool;
     CapGNSSTool gnssTool;
     BusSimulatorTool busSimTool;
     IntercomTool intercomTool;
+    ImageViewerTool imageViewerTool;
 
     bool espNowInitialized;
     uint8_t broadcastAddress[6];
@@ -63,11 +65,13 @@ public:
           gnssTool(),
           busSimTool(),
           intercomTool(),
+          imageViewerTool(),
           espNowInitialized(false) {
         tools[0] = &roverRemoteTool;
         tools[1] = &gnssTool;
         tools[2] = &busSimTool;
         tools[3] = &intercomTool;
+        tools[4] = &imageViewerTool;
         currentTool = tools[0];
         broadcastAddress[0] = 0xFF;
         broadcastAddress[1] = 0xFF;
