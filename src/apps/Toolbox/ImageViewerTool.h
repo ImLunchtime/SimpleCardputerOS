@@ -52,7 +52,7 @@ public:
                 return;
             }
             bool transformed = false;
-            const int panStep = 8;
+            const int panStep = 16;
             if (event.up) {
                 panOffsetY -= panStep;
                 imageView->panBy(0, -panStep);
@@ -218,12 +218,14 @@ private:
         }
         menu->clear();
         imageCount = 0;
-        bool ok = fm->scanAllFiles(imageFiles, imageCount, kMaxImages, ".png");
-        printf("[ImageViewer] scanAllFiles ok=%d count=%d\n", ok ? 1 : 0, imageCount);
+        const String picturesRoot = "/pictures";
+        bool ok = fm->scanDirectoryRecursive(picturesRoot, imageFiles, imageCount, kMaxImages, ".png");
+        printf("[ImageViewer] scanDirectoryRecursive(\"%s\") ok=%d count=%d\n",
+               picturesRoot.c_str(), ok ? 1 : 0, imageCount);
         if (!ok || imageCount == 0) {
-            statusLabel->setText("No PNG images found");
+            statusLabel->setText("No PNG images found in /pictures");
             imageCount = 0;
-            printf("[ImageViewer] no PNG images found\n");
+            printf("[ImageViewer] no PNG images found in /pictures\n");
             return;
         }
         statusLabel->setText("Select an image:");
