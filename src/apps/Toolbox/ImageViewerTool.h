@@ -83,6 +83,28 @@ public:
                     currentZoom = newZoom;
                     imageView->setZoom(currentZoom);
                     transformed = true;
+                } else if (event.text.indexOf('1') != -1) {
+                    int imgW = 0;
+                    int imgH = 0;
+                    if (imageView->getImageSize(imgW, imgH) && imgW > 0 && imgH > 0) {
+                        int bx = 0;
+                        int by = 0;
+                        int bw = 0;
+                        int bh = 0;
+                        imageView->getBounds(bx, by, bw, bh);
+                        float baseScaleX = (float)bw / (float)imgW;
+                        float baseScaleY = (float)bh / (float)imgH;
+                        float baseScale = baseScaleX < baseScaleY ? baseScaleX : baseScaleY;
+                        if (baseScale > 0.0f) {
+                            float newZoom = 1.0f / baseScale;
+                            currentZoom = newZoom;
+                            panOffsetX = 0;
+                            panOffsetY = 0;
+                            imageView->setZoom(currentZoom);
+                            imageView->setOffset(0, 0);
+                            transformed = true;
+                        }
+                    }
                 }
             }
             if (event.enter) {
