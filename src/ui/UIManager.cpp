@@ -355,6 +355,55 @@ void UIManager::removeWidget(int id) {
     }
 }
 
+void UIManager::removeWidgetTree(UIWidget* root) {
+    if (!root) return;
+    UIWidget* toDelete[kMaxWidgets];
+    int deleteCount = 0;
+    for (int i = 0; i < widgetCount; i++) {
+        UIWidget* w = widgets[i];
+        if (!w) continue;
+        UIWidget* p = w;
+        while (p) {
+            if (p == root) {
+                toDelete[deleteCount] = w;
+                deleteCount++;
+                break;
+            }
+            p = p->getParent();
+        }
+    }
+    for (int i = 0; i < deleteCount; i++) {
+        UIWidget* w = toDelete[i];
+        if (!w) continue;
+        if (w == lastPageWindow) {
+            lastPageWindow = nullptr;
+        }
+        for (int j = 0; j < backgroundWidgetCount; j++) {
+            if (backgroundWidgets[j] == w) {
+                for (int k = j; k < backgroundWidgetCount - 1; k++) {
+                    backgroundWidgets[k] = backgroundWidgets[k + 1];
+                }
+                backgroundWidgets[backgroundWidgetCount - 1] = nullptr;
+                backgroundWidgetCount--;
+                j--;
+            }
+        }
+        for (int j = 0; j < foregroundWidgetCount; j++) {
+            if (foregroundWidgets[j] == w) {
+                for (int k = j; k < foregroundWidgetCount - 1; k++) {
+                    foregroundWidgets[k] = foregroundWidgets[k + 1];
+                }
+                foregroundWidgets[foregroundWidgetCount - 1] = nullptr;
+                foregroundWidgetCount--;
+                j--;
+            }
+        }
+        removeFromMainList(w);
+        delete w;
+    }
+    rebuildForegroundFocus();
+}
+
 void UIManager::clear() {
     for (int i = 0; i < widgetCount; i++) {
         if (widgets[i]) {

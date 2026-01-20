@@ -31,12 +31,23 @@ private:
 
     ITool* currentTool;
     static const int kToolCount = 5;
-    ITool* tools[kToolCount];
-    RoverRemoteTool roverRemoteTool;
-    CapGNSSTool gnssTool;
-    BusSimulatorTool busSimTool;
-    IntercomTool intercomTool;
-    ImageViewerTool imageViewerTool;
+    struct ToolDescriptor {
+        const char* menuText;
+        int menuItemId;
+        ITool* (*create)();
+    };
+    static ITool* createRoverRemoteTool() { return new RoverRemoteTool(); }
+    static ITool* createCapGNSSTool() { return new CapGNSSTool(); }
+    static ITool* createBusSimulatorTool() { return new BusSimulatorTool(); }
+    static ITool* createIntercomTool() { return new IntercomTool(); }
+    static ITool* createImageViewerTool() { return new ImageViewerTool(); }
+    inline static const ToolDescriptor kTools[kToolCount] = {
+        {"ESP-NOW Rover Remote", 101, &ToolboxApp::createRoverRemoteTool},
+        {"Cap GNSS", 102, &ToolboxApp::createCapGNSSTool},
+        {"Bus Simulator", 103, &ToolboxApp::createBusSimulatorTool},
+        {"Intercom", 104, &ToolboxApp::createIntercomTool},
+        {"Image Viewer", 105, &ToolboxApp::createImageViewerTool}
+    };
 
     bool espNowInitialized;
     uint8_t broadcastAddress[6];
@@ -61,18 +72,7 @@ public:
           toolMenu(nullptr),
           menuWindow(nullptr),
           currentTool(nullptr),
-          roverRemoteTool(),
-          gnssTool(),
-          busSimTool(),
-          intercomTool(),
-          imageViewerTool(),
           espNowInitialized(false) {
-        tools[0] = &roverRemoteTool;
-        tools[1] = &gnssTool;
-        tools[2] = &busSimTool;
-        tools[3] = &intercomTool;
-        tools[4] = &imageViewerTool;
-        currentTool = tools[0];
         broadcastAddress[0] = 0xFF;
         broadcastAddress[1] = 0xFF;
         broadcastAddress[2] = 0xFF;
@@ -91,16 +91,7 @@ public:
         uiManager->addWidget(toolMenu);
 
         for (int i = 0; i < kToolCount; i++) {
-            ITool* tool = tools[i];
-            if (tool) {
-                tool->setManagers(uiManager, appManager);
-                tool->setup();
-                toolMenu->addItem(tool->getMenuText(), tool->getMenuItemId());
-                UIWindow* window = tool->getWindow();
-                if (window) {
-                    uiManager->setWidgetTreeVisible(window, false);
-                }
-            }
+            toolMenu->addItem(kTools[i].menuText, kTools[i].menuItemId);
         }
         toolMenu->setColors(TFT_GREEN, TFT_YELLOW, TFT_WHITE, TFT_DARKGREY);
 
@@ -129,16 +120,20 @@ public:
 
     void handleToolSelection(MenuItem* item) {
         if (!item) return;
+        if (currentTool) {
+            exitToolView();
+        }
         ITool* selected = nullptr;
         for (int i = 0; i < kToolCount; i++) {
-            ITool* tool = tools[i];
-            if (tool && tool->getMenuItemId() == item->id) {
-                selected = tool;
+            if (kTools[i].menuItemId == item->id && kTools[i].create) {
+                selected = kTools[i].create();
                 break;
             }
         }
         if (selected) {
             currentTool = selected;
+            currentTool->setManagers(uiManager, appManager);
+            currentTool->setup();
             showToolView();
         }
     }
@@ -175,12 +170,6 @@ public:
 
     void showMenuView() {
         if (!menuWindow) return;
-        if (currentTool) {
-            UIWindow* toolWindow = currentTool->getWindow();
-            if (toolWindow) {
-                uiManager->hidePage(toolWindow);
-            }
-        }
         uiManager->showPage(menuWindow);
         uiManager->rebuildForegroundFocus();
         uiManager->refresh();
@@ -205,12 +194,21 @@ private:
 
     void exitToolView() {
         if (!currentTool) return;
+        UIWindow* toolWindow = currentTool->getWindow();
         ToolServices services = buildToolServices();
         currentTool->onExit(services);
         if (currentTool->usesEspNow()) {
             deinitEspNow();
         }
+        if (toolWindow) {
+            uiManager->setWidgetTreeVisible(toolWindow, false);
+        }
         showMenuView();
+        if (toolWindow) {
+            uiManager->removeWidgetTree(toolWindow);
+        }
+        delete currentTool;
+        currentTool = nullptr;
         if (appManager) {
             appManager->setGlobalEscEnabled(true);
         }

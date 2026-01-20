@@ -12,7 +12,18 @@ public:
           positionLabel(nullptr),
           timeLabel(nullptr),
           lastUpdateMs(0),
-          hasFix(false) {
+          hasFix(false),
+          gps(nullptr),
+          gnssInitialized(false),
+          gnssConfigured(false),
+          serialInitialized(false) {
+    }
+
+    ~CapGNSSTool() {
+        if (gps) {
+            delete gps;
+            gps = nullptr;
+        }
     }
 
     const char* getMenuText() const override {
@@ -36,17 +47,34 @@ public:
         (void)services;
     }
 
+    void onExit(const ToolServices& services) override {
+        (void)services;
+        if (gps) {
+            gps->StandbyMode();
+            delete gps;
+            gps = nullptr;
+        }
+        if (gnssInitialized) {
+            Serial1.end();
+        }
+        gnssInitialized = false;
+        gnssConfigured = false;
+        lastUpdateMs = 0;
+        hasFix = false;
+    }
+
     void update(const ToolServices& services) override {
         (void)services;
         if (!uiManager || !window || !window->isVisible()) {
             return;
         }
         initGnss();
-        gps.updateGPS();
-        bool locationUpdated = gps.location.isUpdated();
-        bool timeUpdated = gps.time.isUpdated();
-        int satCount = gps.satellites.value();
-        String mode = gps.getSatelliteMode();
+        if (!gps) return;
+        gps->updateGPS();
+        bool locationUpdated = gps->location.isUpdated();
+        bool timeUpdated = gps->time.isUpdated();
+        int satCount = gps->satellites.value();
+        String mode = gps->getSatelliteMode();
         char satBuf[48];
         snprintf(satBuf, sizeof(satBuf), "Sat: %d %s", satCount, mode.c_str());
         satInfoLabel->setText(satBuf);
@@ -55,10 +83,10 @@ public:
             return;
         }
         lastUpdateMs = now;
-        if (gps.location.isValid()) {
+        if (gps->location.isValid()) {
             hasFix = true;
-            double lat = gps.location.lat();
-            double lon = gps.location.lng();
+            double lat = gps->location.lat();
+            double lon = gps->location.lng();
             char posBuf[64];
             snprintf(posBuf, sizeof(posBuf), "Lat: %.6f  Lon: %.6f", lat, lon);
             positionLabel->setText(posBuf);
@@ -66,10 +94,10 @@ public:
             hasFix = false;
             positionLabel->setText("Lat: ---.------  Lon: ---.------");
         }
-        if (gps.time.isValid()) {
-            int hour = (gps.time.hour() + 8) % 24; // UTC+8 Using a simple calculation now. Will add proper timezone logic according to GPS coords later.
-            int minute = gps.time.minute();
-            int second = gps.time.second();
+        if (gps->time.isValid()) {
+            int hour = (gps->time.hour() + 8) % 24; // UTC+8 Using a simple calculation now. Will add proper timezone logic according to GPS coords later.
+            int minute = gps->time.minute();
+            int second = gps->time.second();
             char timeBuf[32];
             snprintf(timeBuf, sizeof(timeBuf), "Time: %02d:%02d:%02d", hour, minute, second);
             timeLabel->setText(timeBuf);
@@ -84,8 +112,8 @@ public:
         Serial.printf("GNSS sats=%d mode=%s locValid=%d timeValid=%d\n",
                       satCount,
                       mode.c_str(),
-                      gps.location.isValid() ? 1 : 0,
-                      gps.time.isValid() ? 1 : 0);
+                      gps->location.isValid() ? 1 : 0,
+                      gps->time.isValid() ? 1 : 0);
     }
 
 private:
@@ -104,10 +132,10 @@ private:
     unsigned long lastUpdateMs;
     bool hasFix;
 
-    inline static MultipleSatellite gps{Serial1, 115200, SERIAL_8N1, 15, 13};
-    inline static bool gnssInitialized;
-    inline static bool gnssConfigured;
-    inline static bool serialInitialized;
+    MultipleSatellite* gps;
+    bool gnssInitialized;
+    bool gnssConfigured;
+    bool serialInitialized;
 
     int getWindowWidgetId() const override {
         return WINDOW_ID;
@@ -149,14 +177,15 @@ private:
         }
         if (!gnssInitialized) {
             gnssInitialized = true;
-            gps.begin();
+            gps = new MultipleSatellite(Serial1, 115200, SERIAL_8N1, 15, 13);
+            gps->begin();
         }
         if (!gnssConfigured) {
             gnssConfigured = true;
             Serial.print(F("<----------Cap GNSS Remote---------->"));
             Serial.print(F(" TinyGPSPlus v"));
             Serial.println(TinyGPSPlus::libraryVersion());
-            String version = gps.getGNSSVersion();
+            String version = gps ? gps->getGNSSVersion() : String("");
             Serial.printf(" GNSS SW=%s\r\n", version.c_str());
         }
     }

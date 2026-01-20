@@ -28,6 +28,7 @@ public:
     UIWidget* getWidget(int id);
     UIScreen* getRootScreen() const;
     void removeWidget(int id);
+    void removeWidgetTree(UIWidget* root);
     void clear();
     void clearForeground();
     void saveToBackground();
