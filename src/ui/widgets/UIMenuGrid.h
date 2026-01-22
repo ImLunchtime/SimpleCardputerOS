@@ -1,6 +1,7 @@
 #pragma once
 #include <M5Cardputer.h>
 #include "UIMenu.h"
+#include <smooth_ui_toolkit.hpp>
 class UIMenuGrid : public UIMenu {
 private:
     int columns;
@@ -9,21 +10,41 @@ private:
     int itemHeight;
     int selectedRow;
     int selectedCol;
-    int scrollRowOffset;
-    float scrollPixel;
-    float targetScrollPixel;
-    uint32_t lastAnimMs;
-    bool animating;
+    smooth_ui_toolkit::SmoothSelectorMenu* smoothMenu;
 public:
     UIMenuGrid(int id, int x, int y, int width, int height, int _columns, int _rows, const String& name = "")
         : UIMenu(id, WIDGET_MENU_GRID, x, y, width, height, name),
           columns(_columns), rows(_rows),
           selectedRow(0), selectedCol(0),
-          scrollRowOffset(0), scrollPixel(0.0f),
-          targetScrollPixel(0.0f), lastAnimMs(0),
-          animating(false) {
+          smoothMenu(nullptr) {
         itemWidth = (width - 4) / columns;
         itemHeight = (height - 4) / rows;
+    }
+    ~UIMenuGrid() override {
+        if (smoothMenu) {
+            delete smoothMenu;
+            smoothMenu = nullptr;
+        }
+    }
+    void addItem(const String& text, int itemId, bool enabled = true) {
+        UIMenu::addItem(text, itemId, enabled);
+        rebuildSmoothMenuLayout();
+    }
+    void addImageItem(const uint8_t* data, size_t dataSize, int itemId, bool enabled = true) {
+        UIMenu::addImageItem(data, dataSize, itemId, enabled);
+        rebuildSmoothMenuLayout();
+    }
+    void addImageItemFromFile(const String& filePath, int itemId, bool enabled = true) {
+        UIMenu::addImageItemFromFile(filePath, itemId, enabled);
+        rebuildSmoothMenuLayout();
+    }
+    void removeItem(int itemId) {
+        UIMenu::removeItem(itemId);
+        rebuildSmoothMenuLayout();
+    }
+    void clear() {
+        UIMenu::clear();
+        rebuildSmoothMenuLayout();
     }
 private:
     int totalRows() const {
@@ -31,18 +52,39 @@ private:
         if (itemCount <= 0) return 0;
         return (itemCount + columns - 1) / columns;
     }
-    void setScrollRowOffsetAnimated(int newOffset) {
-        if (newOffset < 0) newOffset = 0;
-        int maxTop = totalRows() - rows;
-        if (maxTop < 0) maxTop = 0;
-        if (newOffset > maxTop) newOffset = maxTop;
-        float current = animating ? scrollPixel : ((float)scrollRowOffset * (float)itemHeight);
-        scrollRowOffset = newOffset;
-        targetScrollPixel = (float)scrollRowOffset * (float)itemHeight;
-        scrollPixel = current;
-        animating = true;
-        lastAnimMs = 0;
-        invalidate();
+    void rebuildSmoothMenuLayout() {
+        if (smoothMenu) {
+            delete smoothMenu;
+            smoothMenu = nullptr;
+        }
+        if (columns <= 0 || rows <= 0 || itemWidth <= 0 || itemHeight <= 0 || itemCount <= 0) {
+            return;
+        }
+        smoothMenu = new smooth_ui_toolkit::SmoothSelectorMenu();
+        smooth_ui_toolkit::SmoothSelectorMenu::Config_t cfg;
+        cfg.moveInLoop = false;
+        cfg.cameraSize = smooth_ui_toolkit::Vector2(0.0f, 0.0f);
+        cfg.readInputInterval = 16;
+        cfg.renderInterval = 16;
+        smoothMenu->setConfig(cfg);
+        for (int i = 0; i < itemCount; i++) {
+            int col = i % columns;
+            int row = i / columns;
+            smooth_ui_toolkit::SmoothSelectorMenu::Option_t option;
+            option.keyframe = smooth_ui_toolkit::Vector4((float)(col * itemWidth),
+                                                        (float)(row * itemHeight),
+                                                        (float)itemWidth,
+                                                        (float)itemHeight);
+            option.userData = nullptr;
+            smoothMenu->addOption(option);
+        }
+        if (selectedIndex < 0) selectedIndex = 0;
+        if (selectedIndex >= itemCount) selectedIndex = itemCount - 1;
+        selectedRow = selectedIndex / columns;
+        selectedCol = selectedIndex % columns;
+        const auto& opt = smoothMenu->getOptionList()[selectedIndex];
+        smoothMenu->getSelectorPostion().teleport(opt.keyframe.x, opt.keyframe.y);
+        smoothMenu->getSelectorShape().teleport(opt.keyframe.width, opt.keyframe.height);
     }
 public:
     void draw(LovyanGFX* display) override {
@@ -50,23 +92,35 @@ public:
         drawMenuBorder(display);
         int absX = getAbsoluteX();
         int absY = getAbsoluteY();
-        float sp = animating ? scrollPixel : ((float)scrollRowOffset * (float)itemHeight);
-        if (sp < 0.0f) sp = 0.0f;
-        int maxTop = totalRows() - rows;
-        if (maxTop < 0) maxTop = 0;
-        float maxSp = (float)maxTop * (float)itemHeight;
-        if (sp > maxSp) sp = maxSp;
-        int firstRow = itemHeight > 0 ? (int)(sp / (float)itemHeight) : 0;
-        int yOffset = itemHeight > 0 ? -(int)(sp - (float)firstRow * (float)itemHeight) : 0;
-        int drawRows = rows + 1;
-        for (int row = 0; row < drawRows; row++) {
-            for (int col = 0; col < columns; col++) {
-                int globalRow = firstRow + row;
-                int itemIndex = globalRow * columns + col;
-                if (itemIndex >= itemCount || !items[itemIndex]) continue;
-                MenuItem* item = items[itemIndex];
-                int itemX = absX + 2 + col * itemWidth;
-                int itemY = absY + 2 + yOffset + row * itemHeight;
+        int contentX = absX + 2;
+        int contentY = absY + 2;
+        int contentW = width - 4;
+        int contentH = height - 4;
+        int centerX = contentX + (contentW - itemWidth) / 2;
+        int centerY = contentY + (contentH - itemHeight) / 2;
+        smooth_ui_toolkit::Vector2 selectorPos(0.0f, 0.0f);
+        const std::vector<smooth_ui_toolkit::SmoothSelectorMenu::Option_t>* optionList = nullptr;
+        if (itemCount > 0 && (!smoothMenu || (int)smoothMenu->getOptionList().size() != itemCount)) {
+            rebuildSmoothMenuLayout();
+        }
+        if (smoothMenu) {
+            selectorPos = smoothMenu->getSelectorPostion();
+            optionList = &smoothMenu->getOptionList();
+        }
+        for (int i = 0; i < itemCount; i++) {
+            if (!items[i]) continue;
+            const smooth_ui_toolkit::Vector4 keyframe =
+                (optionList && i < (int)optionList->size())
+                    ? (*optionList)[i].keyframe
+                    : smooth_ui_toolkit::Vector4((float)((i % columns) * itemWidth),
+                                                 (float)((i / columns) * itemHeight),
+                                                 (float)itemWidth,
+                                                 (float)itemHeight);
+            int itemX = centerX + (int)(keyframe.x - selectorPos.x);
+            int itemY = centerY + (int)(keyframe.y - selectorPos.y);
+            if (itemX + itemWidth < contentX || itemX > contentX + contentW) continue;
+            if (itemY + itemHeight < contentY || itemY > contentY + contentH) continue;
+            MenuItem* item = items[i];
                 Theme* currentTheme = getCurrentTheme();
                 if (currentTheme) {
                     GridMenuItemDrawParams params;
@@ -76,7 +130,7 @@ public:
                     params.width = itemWidth;
                     params.height = itemHeight;
                     params.text = (item->imageData || item->useFileImage) ? String("") : item->text;
-                    params.selected = (globalRow == selectedRow && col == selectedCol);
+                    params.selected = (focused && i == selectedIndex);
                     params.enabled = item->enabled;
                     params.focused = focused;
                     params.textColor = textColor;
@@ -90,7 +144,7 @@ public:
                     params.useFile = item->useFileImage;
                     currentTheme->drawGridMenuItem(params);
                 } else {
-                    if (focused && globalRow == selectedRow && col == selectedCol) {
+                    if (focused && i == selectedIndex) {
                         display->fillRect(itemX, itemY, itemWidth, itemHeight, selectedColor);
                     }
                     display->drawRect(itemX, itemY, itemWidth, itemHeight, TFT_DARKGREY);
@@ -123,7 +177,7 @@ public:
                         }
                     } else {
                         uint16_t color = item->enabled ? textColor : disabledColor;
-                        if (focused && globalRow == selectedRow && col == selectedCol) {
+                        if (focused && i == selectedIndex) {
                             color = TFT_BLACK;
                         }
                         display->setFont(&fonts::efontCN_12);
@@ -136,89 +190,73 @@ public:
                         display->print(item->text);
                     }
                 }
-            }
         }
     }
     bool update(uint32_t nowMs) override {
-        if (!visible || itemHeight <= 0) return false;
-        if (!animating) return false;
-        if (lastAnimMs == 0) {
-            lastAnimMs = nowMs;
-            return true;
+        if (!visible || itemHeight <= 0 || itemCount == 0) return false;
+        if (!smoothMenu || (int)smoothMenu->getOptionList().size() != itemCount) {
+            rebuildSmoothMenuLayout();
+            if (!smoothMenu) return false;
         }
-        float dt = (float)(nowMs - lastAnimMs) / 1000.0f;
-        lastAnimMs = nowMs;
-        if (dt <= 0.0f) return false;
-        float diff = targetScrollPixel - scrollPixel;
-        float absDiff = diff >= 0.0f ? diff : -diff;
-        if (absDiff < 0.5f) {
-            scrollPixel = targetScrollPixel;
-            animating = false;
-            return true;
-        }
-        float speed = 80.0f;
-        float maxStep = speed * dt;
-        if (maxStep > absDiff) maxStep = absDiff;
-        scrollPixel += (diff >= 0.0f ? maxStep : -maxStep);
-        return true;
+        smoothMenu->update(nowMs);
+        bool selectorMoving = !smoothMenu->getSelectorPostion().done();
+        bool shapeChanging = !smoothMenu->getSelectorShape().done();
+        return selectorMoving || shapeChanging;
     }
     bool handleSecondaryKeyEvent(const KeyEvent& event) override {
         if (itemCount == 0) return false;
+        if (!smoothMenu) {
+            rebuildSmoothMenuLayout();
+        }
         int total = totalRows();
         if (total <= 0) total = 1;
+        if (selectedIndex < 0) selectedIndex = 0;
+        if (selectedIndex >= itemCount) selectedIndex = itemCount - 1;
+        selectedRow = selectedIndex / columns;
+        selectedCol = selectedIndex % columns;
+        int newIndex = selectedIndex;
         if (event.up) {
             if (selectedRow > 0) {
-                selectedRow--;
-                updateSelectedIndex();
-                if (selectedRow < scrollRowOffset) {
-                    setScrollRowOffsetAnimated(selectedRow);
-                }
+                int candidate = (selectedRow - 1) * columns + selectedCol;
+                if (candidate < itemCount) newIndex = candidate;
+                else newIndex = itemCount - 1;
             }
-            return true;
-        }
-        if (event.down) {
+        } else if (event.down) {
             if (selectedRow < total - 1) {
-                selectedRow++;
-                updateSelectedIndex();
-                if (selectedRow >= scrollRowOffset + rows) {
-                    setScrollRowOffsetAnimated(selectedRow - rows + 1);
-                }
+                int candidate = (selectedRow + 1) * columns + selectedCol;
+                if (candidate < itemCount) newIndex = candidate;
+                else newIndex = itemCount - 1;
             }
-            return true;
-        }
-        if (event.left && selectedCol > 0) {
-            selectedCol--;
-            updateSelectedIndex();
-            return true;
-        }
-        if (event.right) {
+        } else if (event.left) {
+            if (selectedCol > 0) {
+                int candidate = selectedRow * columns + (selectedCol - 1);
+                if (candidate < itemCount) newIndex = candidate;
+            }
+        } else if (event.right) {
             if (selectedCol < columns - 1) {
-                int newIndex = selectedRow * columns + (selectedCol + 1);
-                if (newIndex < itemCount) {
-                    selectedCol++;
-                    updateSelectedIndex();
-                }
+                int candidate = selectedRow * columns + (selectedCol + 1);
+                if (candidate < itemCount) newIndex = candidate;
             }
-            return true;
-        }
-        if (event.enter) {
+        } else if (event.enter) {
             MenuItem* item = getSelectedItem();
             if (item && item->enabled) {
                 onItemSelected(item);
                 secondaryFocus = false;
             }
             return true;
+        } else {
+            return false;
         }
-        return false;
-    }
-private:
-    void updateSelectedIndex() {
-        selectedIndex = selectedRow * columns + selectedCol;
-        if (selectedIndex >= itemCount) {
-            selectedIndex = itemCount - 1;
+
+        if (newIndex != selectedIndex) {
+            selectedIndex = newIndex;
             selectedRow = selectedIndex / columns;
             selectedCol = selectedIndex % columns;
+            if (smoothMenu) {
+                smoothMenu->moveTo(selectedIndex);
+            }
+            invalidate();
         }
-        invalidate();
+        return true;
     }
 };
