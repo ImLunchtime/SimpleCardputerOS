@@ -5,6 +5,7 @@
 #include "system/AppManager.h"
 #include "system/BatteryManager.h"
 #include "assets/icon_music_sd.h"
+#include "assets/icon_gps.h"
 #include "assets/icon_toolbox.h"
 #include "assets/icon_settings.h"
 
@@ -161,6 +162,9 @@ private:
             bool added = false;
             if (name == "music" || display == "Music") {
                 gridMenu->addImageItem(icon_music_sd_png, icon_music_sd_png_size, itemId);
+                added = true;
+            } else if (name == "gnss" || display == "GNSS") {
+                gridMenu->addImageItem(icon_gps, icon_gps_size, itemId);
                 added = true;
             } else if (name == "toolbox" || display == "Toolbox") {
                 gridMenu->addImageItem(icon_toolbox, icon_toolbox_size, itemId);

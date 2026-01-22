@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ITool.h"
+#include "apps/Toolbox/ITool.h"
 #include <M5Cardputer.h>
 #include "MultipleSatellite.h"
 
@@ -27,7 +27,7 @@ public:
     }
 
     const char* getMenuText() const override {
-        return "Cap GNSS";
+        return "GNSS";
     }
 
     int getMenuItemId() const override {
@@ -95,7 +95,7 @@ public:
             positionLabel->setText("Lat: ---.------  Lon: ---.------");
         }
         if (gps->time.isValid()) {
-            int hour = (gps->time.hour() + 8) % 24; // UTC+8 Using a simple calculation now. Will add proper timezone logic according to GPS coords later.
+            int hour = (gps->time.hour() + 8) % 24;
             int minute = gps->time.minute();
             int second = gps->time.second();
             char timeBuf[32];
@@ -163,11 +163,11 @@ private:
     }
 
     void createWidgets(UIManager* manager) override {
-        window = manager->createWindow(WINDOW_ID, 20, 20, 200, 100, "Cap GNSS", "CapGNSSWindow");
-        statusLabel = manager->createLabel(STATUS_LABEL_ID, 8, 25, "GNSS: initializing...", "CapGNSSStatus", window);
-        satInfoLabel = manager->createLabel(SAT_INFO_LABEL_ID, 8, 40, "Sat: -- Mode: --", "CapGNSSSatInfo", window);
-        positionLabel = manager->createLabel(POSITION_LABEL_ID, 8, 55, "Lat: ---.------  Lon: ---.------", "CapGNSSPos", window);
-        timeLabel = manager->createLabel(TIME_LABEL_ID, 8, 70, "Time: --:--:--", "CapGNSSTime", window);
+        window = manager->createWindow(WINDOW_ID, 20, 20, 200, 100, "GNSS", "GNSSWindow");
+        statusLabel = manager->createLabel(STATUS_LABEL_ID, 8, 25, "GNSS: initializing...", "GNSSStatus", window);
+        satInfoLabel = manager->createLabel(SAT_INFO_LABEL_ID, 8, 40, "Sat: -- Mode: --", "GNSSSatInfo", window);
+        positionLabel = manager->createLabel(POSITION_LABEL_ID, 8, 55, "Lat: ---.------  Lon: ---.------", "GNSSPos", window);
+        timeLabel = manager->createLabel(TIME_LABEL_ID, 8, 70, "Time: --:--:--", "GNSSTime", window);
     }
 
     void initGnss() {
@@ -182,7 +182,7 @@ private:
         }
         if (!gnssConfigured) {
             gnssConfigured = true;
-            Serial.print(F("<----------Cap GNSS Remote---------->"));
+            Serial.print(F("<----------GNSS---------->"));
             Serial.print(F(" TinyGPSPlus v"));
             Serial.println(TinyGPSPlus::libraryVersion());
             String version = gps ? gps->getGNSSVersion() : String("");

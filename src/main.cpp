@@ -2,6 +2,7 @@
 #include "system/EventSystem.h"
 #include "system/AppManager.h"
 #include "apps/Launcher/LauncherApp.h"
+#include "apps/GNSS/GNSSApp.h"
 #include "apps/Music/MusicApp.h"
 #include "apps/Settings/SettingsApp.h"
 #include "apps/Toolbox/ToolboxApp.h"
@@ -51,6 +52,7 @@ ThemeManager* globalThemeManager = &globalThemeManagerInstance;
 
 // 应用实例
 LauncherApp launcherApp(&globalEventSystem);
+GNSSApp gnssApp(&globalEventSystem);
 MusicApp musicApp(&globalEventSystem, &globalAppManager);
 SettingsApp settingsApp(&globalEventSystem);
 ToolboxApp toolboxApp(&globalEventSystem);
@@ -81,6 +83,7 @@ void setup() {
   globalAppManager.registerApp("music", "Music", &musicApp);
   globalAppManager.registerApp("settings", "Settings", &settingsApp);
   globalAppManager.registerApp("toolbox", "Toolbox", &toolboxApp);
+  globalAppManager.registerApp("gnss", "GNSS", &gnssApp);
 
   globalAppManager.initialize();
 }

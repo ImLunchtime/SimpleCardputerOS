@@ -6,7 +6,6 @@
 #include "system/AppManager.h"
 #include "ITool.h"
 #include "RoverRemoteTool.h"
-#include "CapGNSSTool.h"
 #include "BusSimulatorTool.h"
 #include "IntercomTool.h"
 #include "ImageViewerTool.h"
@@ -30,20 +29,18 @@ private:
     UIWindow* menuWindow;
 
     ITool* currentTool;
-    static const int kToolCount = 5;
+    static const int kToolCount = 4;
     struct ToolDescriptor {
         const char* menuText;
         int menuItemId;
         ITool* (*create)();
     };
     static ITool* createRoverRemoteTool() { return new RoverRemoteTool(); }
-    static ITool* createCapGNSSTool() { return new CapGNSSTool(); }
     static ITool* createBusSimulatorTool() { return new BusSimulatorTool(); }
     static ITool* createIntercomTool() { return new IntercomTool(); }
     static ITool* createImageViewerTool() { return new ImageViewerTool(); }
     inline static const ToolDescriptor kTools[kToolCount] = {
         {"ESP-NOW Rover Remote", 101, &ToolboxApp::createRoverRemoteTool},
-        {"Cap GNSS", 102, &ToolboxApp::createCapGNSSTool},
         {"Bus Simulator", 103, &ToolboxApp::createBusSimulatorTool},
         {"Intercom", 104, &ToolboxApp::createIntercomTool},
         {"Image Viewer", 105, &ToolboxApp::createImageViewerTool}
