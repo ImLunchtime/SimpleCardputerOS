@@ -97,9 +97,9 @@ inline void MusicApp::handleNextPrevRequests() {
 }
 
 inline void MusicApp::playNextSong() {
-    if (musicFileCount == 0) return;
+    if (musicFiles.empty()) return;
     
-    currentFileIndex = (currentFileIndex + 1) % musicFileCount;
+    currentFileIndex = (currentFileIndex + 1) % musicFiles.size();
     sendAudioCommand(AUDIO_CMD_STOP);
     vTaskDelay(pdMS_TO_TICKS(100));
     sendAudioCommand(AUDIO_CMD_PLAY, 0, musicFiles[currentFileIndex].path.c_str());
@@ -108,9 +108,9 @@ inline void MusicApp::playNextSong() {
 }
 
 inline void MusicApp::playPreviousSong() {
-    if (musicFileCount == 0) return;
+    if (musicFiles.empty()) return;
     
-    currentFileIndex = (currentFileIndex - 1 + musicFileCount) % musicFileCount;
+    currentFileIndex = (currentFileIndex - 1 + musicFiles.size()) % musicFiles.size();
     sendAudioCommand(AUDIO_CMD_STOP);
     vTaskDelay(pdMS_TO_TICKS(100));
     sendAudioCommand(AUDIO_CMD_PLAY, 0, musicFiles[currentFileIndex].path.c_str());
@@ -123,7 +123,7 @@ inline void MusicApp::updateUIFromAudioStatus() {
     
     if (xSemaphoreTake(audioStatusMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
         if (strlen(audioStatus.currentSongName) > 0) {
-            String info = "(" + String(audioStatus.currentFileIndex + 1) + "/" + String(musicFileCount) + ") ";
+            String info = "(" + String(audioStatus.currentFileIndex + 1) + "/" + String(musicFiles.size()) + ") ";
             info += String(audioStatus.currentSongName);
             songLabel->setText(info);
             if (playerSongLabel) {
@@ -343,7 +343,7 @@ inline void MusicApp::updateAudioStatus(bool playing, bool paused, const char* s
             strncpy(audioStatus.currentSongName, fileName, sizeof(audioStatus.currentSongName) - 1);
             audioStatus.currentSongName[sizeof(audioStatus.currentSongName) - 1] = '\0';
             
-            for (int i = 0; i < musicFileCount; i++) {
+            for (int i = 0; i < (int)musicFiles.size(); i++) {
                 if (strcmp(musicFiles[i].path.c_str(), songPath) == 0) {
                     audioStatus.currentFileIndex = i;
                     break;

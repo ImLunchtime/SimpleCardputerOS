@@ -7,7 +7,7 @@ MusicApp::MusicApp(EventSystem* events, AppManager* manager)
     : eventSystem(events), appManager(manager), 
       audioFile(nullptr), audioOutput(nullptr), mp3Generator(nullptr), id3Source(nullptr),
       isPlaying(false), isPaused(false), isInitialized(false), pausedPosition(0),
-      currentVolume(10), musicFileCount(0), currentFileIndex(0),
+      currentVolume(10), currentFileIndex(0), // Removed musicFileCount initialization
       audioTaskHandle(nullptr), audioCommandQueue(nullptr), audioStatusMutex(nullptr),
       scanTaskHandle(nullptr), scanInProgress(false), scanCompleted(false), scanFailed(false), menuBuilt(false) {
     uiManager = appManager->getUIManager();
@@ -169,10 +169,10 @@ void MusicApp::loop() {
         }
         if (scanFailed) {
             songLabel->setText("Scan failed");
-        } else if (musicFileCount <= 0) {
+        } else if (musicFiles.empty()) {
             songLabel->setText("No MP3 files found");
         } else {
-            songLabel->setText("Found " + String(musicFileCount) + " music files");
+            songLabel->setText("Found " + String(musicFiles.size()) + " music files");
             currentFileIndex = 0;
             updateSongInfo();
         }
@@ -284,6 +284,7 @@ void MusicApp::shutdownForExit() {
         audioStatusMutex = nullptr;
     }
 
+    musicFiles.clear(); // Clear music files vector
     clearMusicData();
     cleanup();
     mainWindow = nullptr;

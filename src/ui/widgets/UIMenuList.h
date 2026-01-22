@@ -6,6 +6,7 @@ class UIMenuList : public UIMenu {
 private:
     int itemHeight;
     int visibleItems;
+    bool layoutDirty;
     smooth_ui_toolkit::SmoothSelectorMenu* smoothMenu;
     String clipText(const String& text, int maxWidth) {
         if (text.length() == 0) return text;
@@ -23,13 +24,42 @@ private:
     void rebuildSmoothMenuLayout() {
         int contentW = width - 2;
         int contentH = height - 2;
-        if (smoothMenu) {
-            delete smoothMenu;
-            smoothMenu = nullptr;
+        
+        // Lazy initialization
+        if (!smoothMenu) {
+            smoothMenu = new smooth_ui_toolkit::SmoothSelectorMenu();
+            smooth_ui_toolkit::SmoothSelectorMenu::Config_t cfg;
+            cfg.moveInLoop = false;
+            cfg.cameraSize = smooth_ui_toolkit::Vector2((float)contentW, (float)contentH);
+            cfg.readInputInterval = 16;
+            cfg.renderInterval = 16;
+            smoothMenu->setConfig(cfg);
+        } else {
+             // Just update camera size if needed
+             smoothMenu->setCameraSize(contentW, contentH);
         }
-        if (contentW <= 0 || contentH <= 0 || itemHeight <= 0 || itemCount <= 0) {
+
+        if (contentW <= 0 || contentH <= 0 || itemHeight <= 0) {
             return;
         }
+
+        // Instead of deleting/recreating, we just clear options and re-add them if the count mismatches or just assume append?
+        // But SmoothSelectorMenu doesn't have clearOptions(). We can't access _data directly as it is protected.
+        // Wait, SmoothSelectorMenu has protected _data. We can't clear it easily without subclassing or recreating.
+        // BUT, recreating is expensive.
+        // Let's look at SmoothSelectorMenu.hpp again.
+        // It has `getOptionList()` but no `clearOptionList()`.
+        // So we MUST delete and recreate if we want to change options significantly?
+        // Or we can add a method to SmoothSelectorMenu if we could modify library (user said NO).
+        // So we are stuck with recreating.
+        // BUT, we can avoid doing it on EVERY addItem.
+        // We can just set a dirty flag.
+        
+        if (smoothMenu) {
+             delete smoothMenu;
+             smoothMenu = nullptr;
+        }
+        
         smoothMenu = new smooth_ui_toolkit::SmoothSelectorMenu();
         smooth_ui_toolkit::SmoothSelectorMenu::Config_t cfg;
         cfg.moveInLoop = false;
@@ -37,6 +67,7 @@ private:
         cfg.readInputInterval = 16;
         cfg.renderInterval = 16;
         smoothMenu->setConfig(cfg);
+        
         for (int i = 0; i < itemCount; i++) {
             smooth_ui_toolkit::SmoothSelectorMenu::Option_t option;
             option.keyframe =
@@ -47,14 +78,16 @@ private:
         if (selectedIndex >= 0 && selectedIndex < itemCount) {
             smoothMenu->jumpTo(selectedIndex);
         }
+        layoutDirty = false;
     }
 public:
     UIMenuList(int id, int x, int y, int width, int height, const String& name = "")
         : UIMenu(id, WIDGET_MENU_LIST, x, y, width, height, name),
           itemHeight(18),
-          smoothMenu(nullptr) {
+          smoothMenu(nullptr),
+          layoutDirty(true) {
         visibleItems = (height - 4) / itemHeight;
-        rebuildSmoothMenuLayout();
+        // Don't build immediately, wait for first update/draw
     }
     ~UIMenuList() override {
         if (smoothMenu) {
@@ -64,26 +97,28 @@ public:
     }
     void addItem(const String& text, int itemId, bool enabled = true) {
         UIMenu::addItem(text, itemId, enabled);
-        rebuildSmoothMenuLayout();
+        layoutDirty = true;
     }
     void addImageItem(const uint8_t* data, size_t dataSize, int itemId, bool enabled = true) {
         UIMenu::addImageItem(data, dataSize, itemId, enabled);
-        rebuildSmoothMenuLayout();
+        layoutDirty = true;
     }
     void addImageItemFromFile(const String& filePath, int itemId, bool enabled = true) {
         UIMenu::addImageItemFromFile(filePath, itemId, enabled);
-        rebuildSmoothMenuLayout();
+        layoutDirty = true;
     }
     void removeItem(int itemId) {
         UIMenu::removeItem(itemId);
-        rebuildSmoothMenuLayout();
+        layoutDirty = true;
     }
     void clear() {
         UIMenu::clear();
-        rebuildSmoothMenuLayout();
+        layoutDirty = true;
     }
     void draw(LovyanGFX* display) override {
         if (!visible) return;
+        if (layoutDirty) rebuildSmoothMenuLayout();
+        
         drawMenuBorder(display);
         int absX = getAbsoluteX();
         int absY = getAbsoluteY();
@@ -136,6 +171,7 @@ public:
     }
     bool update(uint32_t nowMs) override {
         if (!visible || itemHeight <= 0 || itemCount == 0) return false;
+        if (layoutDirty) rebuildSmoothMenuLayout();
         if (!smoothMenu) return false;
         smoothMenu->update(nowMs);
         bool selectorMoving = !smoothMenu->getSelectorPostion().done();
@@ -145,6 +181,7 @@ public:
     }
     bool handleSecondaryKeyEvent(const KeyEvent& event) override {
         if (itemCount == 0) return false;
+        if (layoutDirty) rebuildSmoothMenuLayout();
         if (!smoothMenu) return false;
         if (event.up) {
             smoothMenu->goLast();

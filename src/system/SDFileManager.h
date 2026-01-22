@@ -46,14 +46,30 @@ public:
     bool initialize() {
         if (initialized) return true;
         
-        SPI.begin(SD_SPI_SCK_PIN, SD_SPI_MISO_PIN, SD_SPI_MOSI_PIN, SD_SPI_CS_PIN);
+        // M5Cardputer SD pins
+        // SCK: 40, MISO: 39, MOSI: 14, CS: 12
+        // Use HSPI (SPI3) to avoid conflict with Display (usually FSPI/SPI2)
+        // SPI2 is FSPI, SPI3 is HSPI. 
+        // We create a new SPIClass instance for HSPI.
         
-        if (!SD.begin(SD_SPI_CS_PIN, SPI, 25000000)) {
+        // Use a pointer to avoid object destruction issues if declared on stack
+        // But better to have it as member. For now, let's use member.
+        // Wait, if I change it to member, I need to update class definition.
+        // Let's use a static pointer or just leak it (it's a singleton manager anyway)
+        static SPIClass* sdSPI = new SPIClass(HSPI);
+        
+        sdSPI->begin(SD_SPI_SCK_PIN, SD_SPI_MISO_PIN, SD_SPI_MOSI_PIN, SD_SPI_CS_PIN);
+        
+        // Try to initialize SD card
+        // Note: For ESP32-S3 and M5Cardputer, we should ensure SPI frequency is appropriate.
+        if (!SD.begin(SD_SPI_CS_PIN, *sdSPI, 20000000)) { // Reduced to 20MHz for stability
+            // If failed, try to disable LoRa module if present (pin 5) to avoid conflict?
             const int loraDisablePin = 5;
             pinMode(loraDisablePin, OUTPUT);
             digitalWrite(loraDisablePin, HIGH);
             
-            if (!SD.begin(SD_SPI_CS_PIN, SPI, 25000000)) {
+            // Retry with lower frequency
+            if (!SD.begin(SD_SPI_CS_PIN, *sdSPI, 10000000)) {
                 return false;
             }
         }

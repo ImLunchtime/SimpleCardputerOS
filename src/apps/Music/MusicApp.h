@@ -197,9 +197,9 @@ private:
     int currentVolume;
     
     // 音乐文件列表和分类
-    static const int MAX_MUSIC_FILES = 100;
-    FileInfo musicFiles[MAX_MUSIC_FILES];
-    int musicFileCount;
+    // static const int MAX_MUSIC_FILES = 100; // Removed, using dynamic vector
+    std::vector<FileInfo> musicFiles; // Use vector for dynamic sizing and cleanup
+    // int musicFileCount; // Use musicFiles.size()
     int currentFileIndex;
     
     // 音乐分类数据

@@ -7,7 +7,7 @@ inline void MusicApp::scanMusicFiles() {
     if (scanInProgress) return;
     
     clearMusicData();
-    musicFileCount = 0;
+    musicFiles.clear(); // Clear before scan
     currentFileIndex = 0;
     menuBuilt = false;
     scanCompleted = false;
@@ -56,16 +56,19 @@ inline void MusicApp::scanMusicTaskFunction(void* parameter) {
     int count = 0;
     SDFileManager* fm = app->appManager ? app->appManager->getSDFileManager() : nullptr;
     if (fm) {
-        ok = fm->scanAllFiles(app->musicFiles, count, MusicApp::MAX_MUSIC_FILES, ".mp3");
+        const int MAX_FILES = 100;
+        app->musicFiles.resize(MAX_FILES);
+        ok = fm->scanAllFiles(app->musicFiles.data(), count, MAX_FILES, ".mp3");
+        app->musicFiles.resize(count);
     }
     
     if (ok) {
-        app->musicFileCount = count;
-        if (!app->exitRequested && app->musicFileCount > 0) {
+        // app->musicFileCount = count; // Removed
+        if (!app->exitRequested && !app->musicFiles.empty()) {
             app->categorizeMusic();
         }
     } else {
-        app->musicFileCount = 0;
+        app->musicFiles.clear();
     }
     
     app->scanInProgress = false;
@@ -77,7 +80,7 @@ inline void MusicApp::scanMusicTaskFunction(void* parameter) {
 }
 
 inline void MusicApp::playCurrentSong() {
-    if (!isInitialized || musicFileCount == 0 || currentFileIndex < 0 || currentFileIndex >= musicFileCount) {
+    if (!isInitialized || musicFiles.empty() || currentFileIndex < 0 || currentFileIndex >= (int)musicFiles.size()) {
         songLabel->setText("No song selected");
         return;
     }
@@ -119,7 +122,7 @@ inline void MusicApp::playSelectedSong() {
         if (selectedItem->id >= 0 && selectedItem->id < (int)tracksToPlay.size()) {
             MusicTrack* track = tracksToPlay[selectedItem->id];
             
-            for (int i = 0; i < musicFileCount; i++) {
+            for (int i = 0; i < (int)musicFiles.size(); i++) {
                 if (String(musicFiles[i].path) == track->filePath) {
                     currentFileIndex = i;
                     playCurrentSong();
@@ -158,8 +161,8 @@ inline void MusicApp::setVolume(int volume) {
 }
 
 inline void MusicApp::updateSongInfo() {
-    if (musicFileCount > 0 && currentFileIndex >= 0 && currentFileIndex < musicFileCount) {
-        String info = "(" + String(currentFileIndex + 1) + "/" + String(musicFileCount) + ") ";
+    if (!musicFiles.empty() && currentFileIndex >= 0 && currentFileIndex < (int)musicFiles.size()) {
+        String info = "(" + String(currentFileIndex + 1) + "/" + String(musicFiles.size()) + ") ";
         info += musicFiles[currentFileIndex].name;
         songLabel->setText(info);
         if (playerSongLabel) {
@@ -180,7 +183,7 @@ inline void MusicApp::drawInterface() {
 }
 
 inline void MusicApp::categorizeMusic() {
-    for (int i = 0; i < musicFileCount; i++) {
+    for (int i = 0; i < (int)musicFiles.size(); i++) {
         MusicTrack* track = parseFileName(musicFiles[i].name, musicFiles[i].path);
         if (track) {
             allTracks.push_back(track);

@@ -3,7 +3,7 @@
 
 inline void MusicApp::prepareLyricsForCurrentSong() {
     clearLyrics();
-    if (musicFileCount > 0 && currentFileIndex >= 0 && currentFileIndex < musicFileCount) {
+    if (!musicFiles.empty() && currentFileIndex >= 0 && currentFileIndex < (int)musicFiles.size()) {
         String mp3Path = musicFiles[currentFileIndex].path;
         String lrcPath = computeLrcPath(mp3Path);
         SDFileManager* fm = appManager->getSDFileManager();
