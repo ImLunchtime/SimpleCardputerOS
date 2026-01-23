@@ -50,13 +50,6 @@ AppManager globalAppManager(&globalEventSystem);
 ThemeManager globalThemeManagerInstance;
 ThemeManager* globalThemeManager = &globalThemeManagerInstance;
 
-// 应用实例
-LauncherApp launcherApp(&globalEventSystem);
-GNSSApp gnssApp(&globalEventSystem);
-MusicApp musicApp(&globalEventSystem, &globalAppManager);
-SettingsApp settingsApp(&globalEventSystem);
-ToolboxApp toolboxApp(&globalEventSystem);
-
 void setup() {
   auto cfg = M5.config();
   M5Cardputer.begin(cfg, true);
@@ -79,11 +72,11 @@ void setup() {
   globalAppManager.loadSystemConfig();
   M5Cardputer.Display.setBrightness(g_displayBrightness);
 
-  globalAppManager.registerApp("launcher", "Launcher", &launcherApp, true);
-  globalAppManager.registerApp("music", "Music", &musicApp);
-  globalAppManager.registerApp("settings", "Settings", &settingsApp);
-  globalAppManager.registerApp("toolbox", "Toolbox", &toolboxApp);
-  globalAppManager.registerApp("gnss", "GNSS", &gnssApp);
+  globalAppManager.registerApp("launcher", "Launcher", new LauncherApp(&globalEventSystem), true);
+  globalAppManager.registerApp("music", "Music", new MusicApp(&globalEventSystem, &globalAppManager));
+  globalAppManager.registerApp("settings", "Settings", new SettingsApp(&globalEventSystem));
+  globalAppManager.registerApp("toolbox", "Toolbox", new ToolboxApp(&globalEventSystem));
+  globalAppManager.registerApp("gnss", "GNSS", new GNSSApp(&globalEventSystem));
 
   globalAppManager.initialize();
 }

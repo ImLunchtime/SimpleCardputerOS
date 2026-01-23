@@ -48,14 +48,7 @@ public:
         
         // M5Cardputer SD pins
         // SCK: 40, MISO: 39, MOSI: 14, CS: 12
-        // Use HSPI (SPI3) to avoid conflict with Display (usually FSPI/SPI2)
-        // SPI2 is FSPI, SPI3 is HSPI. 
-        // We create a new SPIClass instance for HSPI.
-        
-        // Use a pointer to avoid object destruction issues if declared on stack
-        // But better to have it as member. For now, let's use member.
-        // Wait, if I change it to member, I need to update class definition.
-        // Let's use a static pointer or just leak it (it's a singleton manager anyway)
+
         static SPIClass* sdSPI = new SPIClass(HSPI);
         
         sdSPI->begin(SD_SPI_SCK_PIN, SD_SPI_MISO_PIN, SD_SPI_MOSI_PIN, SD_SPI_CS_PIN);

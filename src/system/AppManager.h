@@ -7,6 +7,7 @@
 #include "system/SleepManager.h"
 #include "system/TipManager.h"
 #include "themes/ThemeManager.h"
+#include <mooncake.h>
 
 extern int g_displayBrightness;
 extern ThemeManager* globalThemeManager;
@@ -17,17 +18,21 @@ struct AppInfo {
     String displayName; // 显示名称
     App* instance;      // 应用实例
     bool isLauncher;    // 是否为启动器应用
+    int id;             // Mooncake ID
     
-    AppInfo(const String& _name, const String& _displayName, App* _instance, bool _isLauncher = false)
-        : name(_name), displayName(_displayName), instance(_instance), isLauncher(_isLauncher) {}
+    AppInfo(const String& _name, const String& _displayName, App* _instance, bool _isLauncher = false, int _id = -1)
+        : name(_name), displayName(_displayName), instance(_instance), isLauncher(_isLauncher), id(_id) {}
 };
 
 class AppManager {
 private:
+    mooncake::Mooncake mooncake;
     AppInfo* apps[10];
     int appCount;
     App* currentApp;
+    int currentAppID;
     App* launcherApp;
+    int launcherAppID;
     EventSystem* eventSystem;
     UIManager* globalUIManager;
     SDFileManager* globalSDManager;
@@ -35,7 +40,7 @@ private:
     TipManager* tipManager;
     
 public:
-    AppManager(EventSystem* events) : appCount(0), currentApp(nullptr), launcherApp(nullptr), eventSystem(events), globalEscEnabled(true), tipManager(nullptr) {
+    AppManager(EventSystem* events) : appCount(0), currentApp(nullptr), currentAppID(-1), launcherApp(nullptr), launcherAppID(-1), eventSystem(events), globalEscEnabled(true), tipManager(nullptr) {
         for (int i = 0; i < 10; i++) {
             apps[i] = nullptr;
         }
@@ -170,12 +175,17 @@ public:
         
         // 设置应用的管理器引用
         app->setManagers(globalUIManager, this);
+        app->setAppInfo().name = name.c_str();
         
-        apps[appCount] = new AppInfo(name, displayName, app, isLauncher);
+        // Mooncake takes ownership
+        int id = mooncake.installApp(std::unique_ptr<mooncake::AppAbility>(app));
+        
+        apps[appCount] = new AppInfo(name, displayName, app, isLauncher, id);
         
         // 如果是启动器应用，记录引用
         if (isLauncher) {
             launcherApp = app;
+            launcherAppID = id;
         }
         
         appCount++;
@@ -218,10 +228,19 @@ public:
     bool launchApp(const String& name) {
         AppInfo* appInfo = findApp(name);
         if (appInfo && appInfo->instance) {
+            
+            // 如果已经在运行其他应用，先关闭
+            if (currentAppID != -1 && currentAppID != launcherAppID) {
+                mooncake.closeApp(currentAppID);
+            }
+            
             // 使用全局UI管理器切换到新应用
             globalUIManager->switchToApp();
+            
+            mooncake.openApp(appInfo->id);
             currentApp = appInfo->instance;
-            currentApp->setup();
+            currentAppID = appInfo->id;
+            
             globalUIManager->finishAppSetup();
             return true;
         }
@@ -231,11 +250,22 @@ public:
     // 返回启动器
     void returnToLauncher() {
         if (launcherApp) {
+            if (currentAppID != -1 && currentAppID != launcherAppID) {
+                mooncake.closeApp(currentAppID);
+            }
+            
             // 使用全局UI管理器切换到启动器（保持背景层）
             globalUIManager->switchToLauncher();
+            
+            // 启动器通常一直运行或重新打开
+             // 这里我们确保它被打开
+             if (mooncake.getAppCurrentState(launcherAppID) == mooncake::AppAbility::StateSleeping) {
+                 mooncake.openApp(launcherAppID);
+             }
+            
             currentApp = launcherApp;
+            currentAppID = launcherAppID;
             globalEscEnabled = true;
-            // 不需要重新setup，因为启动器窗口已经在背景层
         }
     }
     
@@ -246,9 +276,8 @@ public:
     
     // 更新当前应用
     void update() {
-        if (currentApp) {
-            currentApp->loop();
-        }
+        mooncake.update();
+        
         if (globalUIManager && !globalSleepManager.isSleeping()) {
             globalUIManager->tick();
         }
@@ -280,8 +309,11 @@ public:
         if (launcherApp) {
             // 使用全局UI管理器初始化启动器
             globalUIManager->switchToApp();
+            
+            mooncake.openApp(launcherAppID);
             currentApp = launcherApp;
-            currentApp->setup();
+            currentAppID = launcherAppID;
+            
             globalUIManager->finishAppSetup();
         }
     }
@@ -296,6 +328,9 @@ private:
         }
         appCount = 0;
         currentApp = nullptr;
+        currentAppID = -1;
         launcherApp = nullptr;
+        launcherAppID = -1;
+        // Mooncake destructor will clean up apps
     }
 };

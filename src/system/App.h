@@ -2,12 +2,13 @@
 #define APP_H
 
 #include "system/EventSystem.h"
+#include <mooncake.h>
 
 // 前向声明
 class UIManager;
 class AppManager;
 
-class App {
+class App : public mooncake::AppAbility {
 protected:
     UIManager* uiManager;      // 全局UI管理器引用
     AppManager* appManager;    // App管理器引用
@@ -21,6 +22,10 @@ public:
         uiManager = ui;
         appManager = app;
     }
+
+    // Mooncake 生命周期适配
+    void onOpen() override { setup(); }
+    void onRunning() override { loop(); }
     
     // App生命周期方法
     virtual void setup() = 0;           // 初始化
