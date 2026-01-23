@@ -170,7 +170,7 @@ public:
 
         uiManager->setWidgetTreeVisible(aboutWindow, false);
 
-        uiManager->nextFocus();
+        uiManager->rebuildForegroundFocus();
     }
 
     void loop() override {
